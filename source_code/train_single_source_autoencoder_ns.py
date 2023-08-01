@@ -16,17 +16,25 @@ import gc
 import logging
 import os
 
+import tensorflow
+if tensorflow.__version__ >= '2.0':
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+    from tensorflow import keras
+    import tensorflow.compat.v1.keras.backend as K
+else:
+    import tensorflow as tf
+    import keras
+    from keras import backend as K
+from keras import optimizers
 import keras.losses
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.models import load_model, Model
-from keras import backend as K
-from keras import optimizers
-import numpy as np
 if keras.__version__ >= '2.3.1':
     from keras.layers import LayerNormalization
 else:
     from keras_layer_normalization import LayerNormalization
-import tensorflow as tf
+import numpy as np
 
 from error import Error, ParameterError
 from file_operation import list_dirs_start_str, list_files_end_str, mkdir, walk_files_end_str
@@ -37,10 +45,16 @@ from prepare_data_shipsear_recognition_mix_s0tos3 import save_process_batch
 from prepare_data_shipsear_recognition_mix_s0tos3 import read_data, read_datas, save_datas
 from separation_mix_shipsear_s0tos3_preprocess import sourceframes_mo_create
 from train_functions import output_history, save_model_struct
-from models.models_autoencoder import segment_encoded_signal, overlap_and_add_in_decoder, DprnnBlock
+from models.models_autoencoder import segment_encoded_signal, overlap_and_add_in_decoder, overlap_and_add_mask_segments
+from models.models_autoencoder import DprnnBlock, DprnnBlockModel
 from models.models_autoencoder import build_model_1, build_model_2, build_model_3
 from models.models_autoencoder import build_model_4, build_model_5, build_model_6
 from models.models_autoencoder import build_model_7, build_model_8
+from models.models_autoencoder import build_model_10, build_model_14
+from models.models_autoencoder import build_model_20
+from models.conv_tasnet.blocks import TcnBranch, TemporalConvBlock
+from models.conv_tasnet.layers import DepthwiseConv1D, Conv1DTranspose, NormalLayer, GlobalNormalization
+from models.wave_u_net.layers import AudioClipLayer, CropLayer, CropConcatLayer,  InterpolationLayer
 
 
 def data_save_reshape_ae(data):
@@ -53,6 +67,23 @@ def data_save_reshape_ae(data):
     if data.ndim == 2:
         return data
     return data_save_reshape(data)
+
+
+def subset_seq(seq, n_sams):
+    """Split index seqs to different sets.
+    Args:
+        seq (list[int]): index of the source.
+        n_sams (list[int]): numbers of the sets.
+    Returns:
+        nums list[list[int]]: index of different sets.
+    """
+    nums = []
+    i = 0
+    for n_sam in n_sams:
+        nums.append(seq[i:i+n_sam])
+        i += n_sam
+
+    return nums
 
 
 def z_sets_ns_create(s_list, nums, scaler_data, path_save):
@@ -99,23 +130,6 @@ def z_sets_ns_create(s_list, nums, scaler_data, path_save):
             z_set_ns_create(s_ci, nums, save_name=os.path.join(path_save, f'Z_{i}_ns')))
 
     return data_sources  # [n_src][set](n_sams, 1, frame_length)
-
-
-def subset_seq(seq, n_sams):
-    """Split index seqs to different sets.
-    Args:
-        seq (list[int]): index of the source.
-        n_sams (list[int]): numbers of the sets.
-    Returns:
-        nums list[list[int]]: index of different sets.
-    """
-    nums = []
-    i = 0
-    for n_sam in n_sams:
-        nums.append(seq[i:i+n_sam])
-        i += n_sam
-
-    return nums
 
 
 def predict_autoencoder(model, z_test, path_save, save_name, mode='batch_process', bs_pred=32, compile_model=False,
@@ -207,7 +221,7 @@ def test_autoencoder(x_dict, z_names=None, modelname=None, paras=None,
         mkdir(path_out)
 
     mode_pred = paras['mode_pred'] if 'mode_pred' in paras.keys() else 'batch_process'
-    bs_pred = paras['bs_pred'] if 'bs_pred' in paras.keys() else 32
+    bs_pred = paras['bs_pred'] if 'bs_pred' in paras.keys() else None
     for x_dataset, z_set_name in zip(x_dict.values(), z_names):
         save_name = f'{z_set_name}_autodecoded'
         if weight_file_name is not None:
@@ -225,12 +239,14 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
         z_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): dict of model output, data predict target.
         path_save (str): where to save autoencoder output predict.
         modelname (str, optional): for autoencoder model name. Defaults to None.
+        dict_model_load (dict, optional): custom objects for load model. Defaults to None.
+        fname_model_load (str, optional): file name of model to load. Defaults to None.
     """
     if fname_model_load is None:
         # give a new moel for the first time training
         model = autoencoder
         if 'optimizer' in paras.keys():
-            optimizer = paras['paras']
+            optimizer = paras['optimizer']
         else:
             learn_rate = paras['learn_rate'] if 'learn_rate' in paras.keys() else paras['i']*(10**paras['j'])
             optimizer_type = paras['optimizer_type'] if 'optimizer_type' in paras.keys() else 'adm'
@@ -271,6 +287,12 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
     _, z_val_name, _ = z_dict.keys()
     z_train, z_val, _ = z_dict.values()
 
+    path_save_model = os.path.join(path_save, 'auto_model', z_val_name[:-4], modelname)
+    mkdir(path_save_model)
+
+    save_json = paras['save_json'] if 'save_json' in paras.keys() else True
+    save_model_struct(model, path_save_model, 'auto_model_struct', save_json=save_json)
+
     path_check = os.path.join(path_save, 'auto_model', z_val_name[:-4], modelname)
     mkdir(path_check)
     check_filename = os.path.join(path_check, f'weights_{modelname}'+'_{epoch:02d}_{val_loss:.2f}.hdf5')
@@ -289,11 +311,6 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
                         shuffle=shuffle,
                         validation_data=(x_val, z_val),
                         callbacks=[TensorBoard(log_dir=path_board), checkpoint])
-
-    path_save_model = os.path.join(path_save, 'auto_model', z_val_name[:-4], modelname)
-    mkdir(path_save_model)
-
-    save_model_struct(model, path_save_model, 'auto_model_struct')
 
     model.save(os.path.join(path_save_model, f'{modelname}_auto.h5'))
 
@@ -413,7 +430,7 @@ def save_encoder_decoder(n_encoder_layer, decoder=None, path_save_model=None,
     save_model_struct(encoder, path_save_model, 'encoder_model_struct')
 
     if decoder is None:
-        # DO NOT use this, not working !
+        # DO NOT use this, doesnot working !
         decoder = part_back_model(auto_model, auto_model.get_layer(encoder_out_layer_name).output)
     else:
         logging.debug(f'num auto layer {len(auto_model.layers[n_encoder_layer+1:])}')
@@ -499,9 +516,89 @@ def test_encoder_decoder(z_dict, path_save_model=None, encoder_model_name=None, 
                             mode='batch_save', bs_pred=bs_pred)
 
 
+class PadNumberSample(object):
+    def __init__(self, batch_size):
+        self.batch_size = batch_size
+        self.num_padd = None
+        self.num_data = None
+        self.is_padd = None
+        self.data_padd = None
+        self.data_recover = None
+
+    def padd_data(self, data, mode='last'):
+        if self.data_padd is None:
+            num_data = data.shape[0]
+            num_remainder = num_data % self.batch_size
+            self.num_data = num_data
+            if num_remainder == 0:
+                self.num_padd = num_data
+                self.is_padd = False
+                self.data_padd = data
+            else:
+                num_add = self.batch_size - num_remainder
+                self.num_padd = num_data + num_add
+                self.is_padd = True
+                if mode == 'last':
+                    data_add = np.asarray(data)[-num_add:]
+                elif mode == 'zero':
+                    data_add = np.zeros((num_add,)+tuple(np.asarray(data).shape[1:]), dtype=np.float32)
+                data_padd = np.vstack((data, data_add))
+                self.data_padd = data_padd
+        return self.data_padd
+
+    def recover_data(self, data_padd=None):
+        if data_padd is None:
+            data_padd = self.data_padd
+        if self.is_padd is True:
+            data_recover = data_padd[:self.num_data]
+        else:
+            data_recover = data_padd
+        self.data_recover = data_recover
+        return self.data_recover
+
+
+class PadNumberSampleDict(object):
+    def __init__(self, data_dict, batch_size):
+        self.data_dict = data_dict
+        self.batch_size = batch_size
+        self.obj_padd = []
+        self.names_list = []
+        self.data_dict_padd = None
+
+    def padd_data(self):
+        if self.data_dict_padd is None:
+            names_list = []
+            data_list = []
+            for name_i, data_i in self.data_dict.items():
+                names_list.append(name_i)
+                obj_padd_i = PadNumberSample(self.batch_size)
+                self.obj_padd.append(obj_padd_i)
+                data_list.append(obj_padd_i.padd_data(data_i))
+            self.names_list = names_list
+            data_dict_padd = dict(zip(names_list, data_list))
+            self.data_dict_padd = data_dict_padd
+        return self.data_dict_padd
+
+    def recover_data(self, data_dict_padd=None):
+        if data_dict_padd is None:
+            data_dict_padd = self.data_dict_padd
+            names_list = self.names_list
+        else:
+            names_list = []
+            for name_i in data_dict_padd.keys():
+                names_list.append(name_i)
+
+        data_list_recover = []
+        for obj_padd_i, data_dict_padd_i in zip(self.obj_padd, data_dict_padd.values()):
+            data_list_recover.append(obj_padd_i.recover_data(data_dict_padd_i))
+        data_dict_recover = dict(zip(names_list, data_list_recover))
+        return data_dict_recover
+
+
 def train_test_ae(autoencoder, decoder, n_encoder_layer, paras, x_dict, z_dict, z_set_name, path_save,
                   dict_model_load=None, fname_model_load=None,
-                  bool_train=True, bool_test_ae=True, bool_save_ed=True, bool_test_ed=True):
+                  bool_train=True, bool_test_ae=True, bool_save_ed=True, bool_test_ed=True,
+                  bool_num_padd=False, obj_padd_x=None, obj_padd_z=None):
     """Train and test autoencoder models.
     Args:
         autoencoder (keras.Model): model of autoencoder.
@@ -518,14 +615,20 @@ def train_test_ae(autoencoder, decoder, n_encoder_layer, paras, x_dict, z_dict, 
         bool_test_ae (bool, optional): whether test ae model. Defaults to True.
         bool_save_ed (bool, optional): whether save encoder and decoder model. Defaults to True.
         bool_test_ed (bool, optional): whether test encoder and decoder model. Defaults to True.
+        bool_num_padd (bool, optional): whether padd samples to make number of samples is divisible by batch size.
+                                        Defaults to False.
+        obj_padd_x (PadNumberSampleDict, optional): object to padd x_dict. Defaults to None.
+        obj_padd_z (PadNumberSampleDict, optional): object to padd z_dict. Defaults to None.
     """
+    if bool_num_padd:
+        x_dict = obj_padd_x.padd_data()
+        z_dict = obj_padd_z.padd_data()
     if bool_train:
         if fname_model_load is None:
             train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save)
         else:
             train_autoencoder(None, paras, x_dict, z_dict, path_save,
                               dict_model_load=dict_model_load, fname_model_load=fname_model_load)
-
     if bool_test_ae:
         test_autoencoder(x_dict, z_names=list(z_dict.keys()), path_save=path_save, paras=paras,
                          dict_model_load=dict_model_load)
@@ -546,7 +649,7 @@ def test_weight_ae(data_dict, n_encoder_layer, path_save=None, paras=None, dict_
         n_encoder_layer (int): number of layers of encoder model.
         path_save (str, optional): where to save model. Defaults to None.
         paras (dict, optional): parameters for train model. Defaults to None.
-        weight_file_name (str, optional): for name of the weight file name. Defaults to None.
+        weight_file_names (list[str], optional): name of the weight file. Defaults to None.
         path_save_model (str, optional): path of the autoencoder model. Defaults to None.
         modelname (str, optional): for autoencoder model name. Defaults to None.
         bool_test_ae (bool, optional): whether test ae model. Defaults to False.
@@ -577,31 +680,47 @@ def test_weight_ae(data_dict, n_encoder_layer, path_save=None, paras=None, dict_
         if bool_test_ae:
             test_autoencoder(data_dict, z_names=list(data_dict.keys()), path_save=path_save, paras=paras,
                              dict_model_load=dict_model_load,
-                             weight_file_name=os.path.join(path_save_model, weight_file_name),)
+                             weight_file_name=os.path.join(path_save_model, weight_file_name))
 
 
-def clear_model_weight_file(path_model_dir):
+
+def clear_model_weight_file(path_model_dir, pos_epoch=-2):
     """Clear model files with weights, saved the last model.
     Args:
-        path_model (str): Root path, where save weight files of a model.
+        path_model_dir (str): Root path, where save weight files of a model.
     """
     path_model_weights = walk_files_end_str(path_model_dir, '.hdf5')
-    for i in range(len(path_model_weights)-1):
-        if os.path.dirname(path_model_weights[i+1]) == os.path.dirname(path_model_weights[i]):
-            os.remove(path_model_weights[i])
+    logging.debug(f'path_model_weights {path_model_weights}')
+    f_name_0 = os.path.basename(path_model_weights[0])[:-len('.hdf5')]
+    index_epoch_0 = int(f_name_0.split('_')[pos_epoch])
+    index_max_epoch = index_epoch_0
+    path_max_epoch = path_model_weights[0]
+    for i in range(1, len(path_model_weights)):
+        if os.path.dirname(path_model_weights[i]) == os.path.dirname(path_max_epoch):
+            f_name_i = os.path.basename(path_model_weights[i])[:-len('.hdf5')]
+            index_epoch_i = int(f_name_i.split('_')[pos_epoch])
+            if index_epoch_i > index_max_epoch:
+                # logging.debug(f'remove {path_max_epoch}')
+                os.remove(path_max_epoch)
+                index_max_epoch = index_epoch_i
+                path_max_epoch = path_model_weights[i]
+            else:
+                # logging.debug(f'remove {path_model_weights[i]}')
+                os.remove(path_model_weights[i])
 
     path_model_weights = walk_files_end_str(path_model_dir, '.hdf5')
 
 
-def clear_model_weight_files(path, model_dirname='auto_model'):
+def clear_model_weight_files(path, model_dirname='auto_model', pos_epoch=-2):
     """Clear model files with weights, saved the last model.
     Args:
         path (str): Root path, where save models.
+        model_dirname (str, optional): sub dir name of directories. Defaults to 'auto_model'.
     """
     path_models = list_dirs_start_str(path, 'model_')
     for path_model in path_models:
         path_model_dir = os.path.join(path_model, model_dirname)
-        clear_model_weight_file(path_model_dir)
+        clear_model_weight_file(path_model_dir, pos_epoch)
 
 
 def compute_num_model(model_name):
@@ -624,7 +743,7 @@ def build_dict_model_load(num_model, **kwargs):
     Returns:
         dict_model_load (dict): items of the model.
     """
-    if num_model in (1, 2, 3, 4, 7, 8, 9):
+    if num_model in (1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21):
         if 'user_metrics_func' in kwargs.keys():
             user_metrics_func = kwargs['user_metrics_func']
         else:
@@ -649,32 +768,36 @@ def build_dict_model_load(num_model, **kwargs):
         dict_model_load = dict(zip(user_metrics_name, user_metrics_func))
 
     if num_model in (8, 9):
-        rnn_type = kwargs['rnn_type'] if 'rnn_type' in kwargs.keys() else 'LSTM'
 
         dict_model_load.update(**{'LayerNormalization': LayerNormalization,
                                   'segment_encoded_signal': segment_encoded_signal,
                                   'overlap_and_add_in_decoder': overlap_and_add_in_decoder,
                                   'tf': tf,
                                   })
-        if rnn_type == 'dprnn':
-            input_dim = kwargs['input_dim'] if 'input_dim' in kwargs.keys() else 10547
-            n_pad_input = kwargs['n_pad_input'] if 'n_pad_input' in kwargs.keys() else 13
-            chunk_size = kwargs['chunk_size'] if 'chunk_size' in kwargs.keys() else 64
-            units_r = kwargs['units_r'] if 'units_r' in kwargs.keys() else 2
-            act_r = kwargs['act_r'] if 'act_r' in kwargs.keys() else 'tanh'
-            use_bias = kwargs['use_bias'] if 'use_bias' in kwargs.keys() else True
-            n_filters_conv = kwargs['n_filters_conv'] if 'n_filters_conv' in kwargs.keys() else 1
-            n_full_chunks = (input_dim + n_pad_input) // chunk_size
-            n_overlapping_chunks = kwargs['n_overlapping_chunks'] if 'n_overlapping_chunks' in kwargs.keys(
-            ) else n_full_chunks*2-1
-            dict_dprnn = {'DprnnBlock': DprnnBlock(is_last_dprnn=False,
-                                                   num_overlapping_chunks=n_overlapping_chunks,
-                                                   chunk_size=chunk_size,
-                                                   num_filters_in_encoder=n_filters_conv,
-                                                   units_per_lstm=units_r,
-                                                   act_r=act_r,
-                                                   use_bias=use_bias)}
-            dict_model_load.update(**dict_dprnn)
+
+    if num_model in (10, 11, 12, 13):  # TasNet, multiple decoder TasNet with DPRNN, BLSTM, LSTM
+        dict_model_load.update(**{'LayerNormalization': LayerNormalization,
+                                  'segment_encoded_signal': segment_encoded_signal,
+                                  'overlap_and_add_mask_segments': overlap_and_add_mask_segments,
+                                  'overlap_and_add_in_decoder': overlap_and_add_in_decoder,
+                                  'tf': tf,
+                                  })
+    if num_model in (14, 15, 16, 17, 18):  # conv-TasNet, multiple decoder conv-TasNet with TCN
+        dict_model_load.update(**{'LayerNormalization': LayerNormalization,
+                                  'segment_encoded_signal': segment_encoded_signal,
+                                  'overlap_and_add_mask_segments': overlap_and_add_mask_segments,
+                                  'overlap_and_add_in_decoder': overlap_and_add_in_decoder,
+                                  'DepthwiseConv1D': DepthwiseConv1D,
+                                  'GlobalNormalization': GlobalNormalization,
+                                  'tf': tf,
+                                  })
+    if num_model in (20, 21):  # wave-U-Net, multiple decoder wave-U-Net
+        dict_model_load.update(**{'AudioClipLayer': AudioClipLayer,
+                                  'CropLayer': CropLayer,
+                                  'CropConcatLayer': CropConcatLayer,
+                                  'InterpolationLayer': InterpolationLayer,
+                                  'tf': tf,
+                                  })
     return dict_model_load
 
 
@@ -699,10 +822,11 @@ class BuildModel(object):
         self.act_r = kwargs['act_r'] if 'act_r' in kwargs.keys() else 'tanh'
         self.batch_norm = kwargs['batch_norm'] if 'batch_norm' in kwargs.keys() else False
         self.n_pad_input = kwargs['n_pad_input'] if 'n_pad_input' in kwargs.keys() else 13
-        self.n_filters = kwargs['n_filters'] if 'n_filters' in kwargs.keys() else 1
+        self.n_filters = kwargs['n_filters'] if 'n_filters' in kwargs.keys() else 2
         self.use_bias = kwargs['use_bias'] if 'use_bias' in kwargs.keys() else True
         self.n_outputs = kwargs['n_outputs'] if 'n_outputs' in kwargs.keys() else 1
         self.epsilon_std = kwargs['epsilon_std'] if 'epsilon_std' in kwargs.keys() else 1.0
+        self.n_filters_conv = kwargs['n_filters_conv'] if 'n_filters_conv' in kwargs.keys() else 2
 
     def build_model(self, **kwargs):
         """Build a autoencoder model.
@@ -809,6 +933,7 @@ class BuildModel(object):
             strides = kwargs['strides'] if 'strides' in kwargs.keys() else 1
             batch_norm = kwargs['batch_norm'] if 'batch_norm' in kwargs.keys() else False
             rnn_type = kwargs['rnn_type'] if 'rnn_type' in kwargs.keys() else 'LSTM'
+            batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else None
             n_full_chunks = (input_dim + n_pad_input) // chunk_size
             n_overlapping_chunks = n_full_chunks*2-1
             self.chunk_size = chunk_size
@@ -826,7 +951,118 @@ class BuildModel(object):
                 input_dim, n_pad_input, chunk_size, chunk_advance,
                 n_conv_encoder, n_filters, kernel_size, strides, batch_norm, act_c,
                 n_rnn_encoder, n_rnn_decoder, rnn_type, latent_dim, act_r, use_bias,
-                n_outputs, encoder_multiple_out)
+                n_outputs, encoder_multiple_out, batch_size=batch_size)
+        elif num_model in (10, 11, 12, 13):
+            # model 10 TasNet
+            # model 11 Multiple Decoder TasNet
+            # model 12 One Encoder - One Decoder (TasNet without mask)
+            # model 13 One Encoder - Multiple Decoder (TasNet without mask)
+            input_dim = self.input_dim
+            n_pad_input = self.n_pad_input
+            n_filters_conv = self.n_filters_conv
+            act_c = self.act_c
+            latent_dim = self.latent_dim
+            act_r = self.act_r
+            use_bias = self.use_bias
+            n_outputs = self.n_outputs
+            n_conv_encoder = kwargs['n_conv_encoder'] if 'n_conv_encoder' in kwargs.keys() else 1
+            chunk_size = kwargs['chunk_size'] if 'chunk_size' in kwargs.keys() else 64
+            chunk_advance = kwargs['chunk_advance'] if 'chunk_advance' in kwargs.keys() else chunk_size // 2
+            kernel_size = kwargs['kernel_size'] if 'kernel_size' in kwargs.keys() else 2
+            strides = kwargs['strides'] if 'strides' in kwargs.keys() else 1
+            batch_norm = kwargs['batch_norm'] if 'batch_norm' in kwargs.keys() else False
+            n_block_encoder = kwargs['n_block_encoder'] if 'n_block_encoder' in kwargs.keys() else 1
+            n_block_decoder = kwargs['n_block_decoder'] if 'n_block_decoder' in kwargs.keys() else 1
+            block_type = kwargs['block_type'] if 'block_type' in kwargs.keys() else 'BLSTM'
+            is_multiple_decoder = kwargs['is_multiple_decoder'] if 'is_multiple_decoder' in kwargs.keys() else False
+            use_mask = kwargs['use_mask'] if 'use_mask' in kwargs.keys() else True
+            use_ln_decoder = kwargs['use_ln_decoder'] if 'use_ln_decoder' in kwargs.keys() else False
+            model_type = kwargs['model_type'] if 'model_type' in kwargs.keys() else 'separator'
+            encoder_multiple_out = kwargs['encoder_multiple_out'] if 'encoder_multiple_out' in kwargs.keys() else False
+            batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else None
+            autoencoder, decoder, n_encoder_layer, n_decoder_layer = build_model_10(
+                input_dim, n_pad_input, chunk_size, chunk_advance,
+                n_conv_encoder, n_filters_conv, kernel_size, strides, batch_norm, act_c,
+                n_block_encoder, n_block_decoder, block_type, use_bias, n_outputs, is_multiple_decoder,
+                use_mask=use_mask,
+                units_r=latent_dim, act_r=act_r, use_ln_decoder=use_ln_decoder,
+                model_type=model_type, encoder_multiple_out=encoder_multiple_out, batch_size=batch_size,
+            )
+        elif num_model in (14, 15, 16, 17, 18, 19):
+            # conv-TasNet (TCN)
+            #                      use_mask, use_residual, use_skip, use_sum_repeats, is_multiple_decoder, -> works   network structure
+            # model_14_{n=1~4}}  True/False,         True,     True,      True/False,               False, ->  True   Conv-TasNet or Encoder-Decoder
+            # model_15_{n=1~4}}  True/False,         True,     True,      True/False,                True, ->  True   Conv-TasNet or Encoder-Decoder with Multiple Decoder
+            # model_16_{n=1~4}}  True/False,         True,    False,           False,               False, ->  True   Normal ResNet Multiple Decoder
+            # model_17_{n=1~4}}  True/False,         True,    False,           False,                True, ->  True   Normal ResNet
+            # model_18_{n=1~4}}  True/False,        False,     True,      True/False,               False, -> False   Parallel CNN with Multiple Decoder
+            # model_19_{n=1~4}}  True/False,        False,     True,      True/False,                True, ->  True   Parallel CNN
+            #                    True/False,        False,    False,      True/False,          True/False, -> False   no network (add inputs)
+            input_dim = self.input_dim
+            n_pad_input = self.n_pad_input
+            act_c = self.act_c
+            use_bias = self.use_bias
+            n_outputs = self.n_outputs
+            n_conv_encoder = kwargs['n_conv_encoder'] if 'n_conv_encoder' in kwargs.keys() else 1
+            n_filters_encoder = kwargs['n_filters_encoder'] if 'n_filters_encoder' in kwargs.keys() else 2
+            kernel_size_encoder = kwargs['kernel_size_encoder'] if 'kernel_size_encoder' in kwargs.keys() else 2
+            strides_encoder = kwargs['strides_encoder'] if 'strides_encoder' in kwargs.keys() else 1
+            n_channels_conv = kwargs['n_channels_conv'] if 'n_channels_conv' in kwargs.keys() else 2
+            n_channels_bottleneck = kwargs['n_channels_bottleneck'] if 'n_channels_bottleneck' in kwargs.keys() else 2
+            n_channels_skip = kwargs['n_channels_skip'] if 'n_channels_skip' in kwargs.keys() else 2
+            n_block_encoder = kwargs['n_block_encoder'] if 'n_block_encoder' in kwargs.keys() else 1
+            n_block_decoder = kwargs['n_block_decoder'] if 'n_block_decoder' in kwargs.keys() else 1
+            n_layer_each_block = kwargs['n_layer_each_block'] if 'n_layer_each_block' in kwargs.keys() else 2
+            kernel_size = kwargs['kernel_size'] if 'kernel_size' in kwargs.keys() else 3
+            causal = kwargs['causal'] if 'causal' in kwargs.keys() else False
+            norm_type = kwargs['norm_type'] if 'norm_type' in kwargs.keys() else 'gln'
+            is_multiple_decoder = kwargs['is_multiple_decoder'] if 'is_multiple_decoder' in kwargs.keys() else False
+            use_residual = kwargs['use_residual'] if 'use_residual' in kwargs.keys() else True
+            use_skip = kwargs['use_skip'] if 'use_skip' in kwargs.keys() else True
+            use_sum_repeats = kwargs['use_sum_repeats'] if 'use_sum_repeats' in kwargs.keys() else False
+            use_mask = kwargs['use_mask'] if 'use_mask' in kwargs.keys() else True
+            act_mask = kwargs['act_mask'] if 'act_mask' in kwargs.keys() else 'sigmoid'
+            model_type = kwargs['model_type'] if 'model_type' in kwargs.keys() else 'separator'
+            encoder_multiple_out = kwargs['encoder_multiple_out'] if 'encoder_multiple_out' in kwargs.keys() else False
+            autoencoder, decoder, n_encoder_layer, n_decoder_layer = build_model_14(
+                input_dim, n_pad_input,
+                n_conv_encoder, n_filters_encoder, kernel_size_encoder, strides_encoder, act_c, use_bias,
+                n_channels_conv, n_channels_bottleneck, n_channels_skip,
+                n_block_encoder, n_block_decoder, n_layer_each_block, kernel_size, causal, norm_type,
+                n_outputs, is_multiple_decoder,
+                use_residual=use_residual, use_skip=use_skip, use_sum_repeats=use_sum_repeats,
+                use_mask=use_mask, act_mask=act_mask, model_type=model_type, encoder_multiple_out=encoder_multiple_out,
+            )
+        elif num_model in (20, 21):
+            input_dim = self.input_dim
+            n_pad_input = self.n_pad_input
+            n_outputs = self.n_outputs
+            use_bias = self.use_bias
+            batch_norm = self.batch_norm
+            is_multiple_decoder = kwargs['is_multiple_decoder'] if 'is_multiple_decoder' in kwargs.keys() else False
+            num_channels = kwargs['num_channels'] if 'num_channels' in kwargs.keys() else 1
+            num_layers = kwargs['num_layers'] if 'num_layers' in kwargs.keys() else 12
+            num_initial_filters = kwargs['num_initial_filters'] if 'num_initial_filters' in kwargs.keys() else 24
+            kernel_size = kwargs['kernel_size'] if 'kernel_size' in kwargs.keys() else 15
+            merge_filter_size = kwargs['merge_filter_size'] if 'merge_filter_size' in kwargs.keys() else 5
+            output_filter_size = kwargs['output_filter_size'] if 'output_filter_size' in kwargs.keys() else 1
+            padding = kwargs['padding'] if 'padding' in kwargs.keys() else 'same'
+            context = kwargs['context'] if 'context' in kwargs.keys() else False
+            upsampling_type = kwargs['upsampling_type'] if 'upsampling_type' in kwargs.keys() else 'learned'
+            output_activation = kwargs['output_activation'] if 'output_activation' in kwargs.keys() else 'linear'
+            output_type = kwargs['output_type'] if 'output_type' in kwargs.keys() else 'difference'
+            use_skip = kwargs['use_skip'] if 'use_skip' in kwargs.keys() else True
+            model_type = kwargs['model_type'] if 'model_type' in kwargs.keys() else 'separator'
+            encoder_multiple_out = kwargs['encoder_multiple_out'] if 'encoder_multiple_out' in kwargs.keys() else False
+
+            # model 20 wave_u_net
+            # model 21 Multiple Decoder wave_u_net
+            autoencoder, decoder, n_encoder_layer, n_decoder_layer = build_model_20(
+                input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_channels,
+                num_layers, num_initial_filters, kernel_size, use_bias, merge_filter_size,
+                output_filter_size, padding, context, upsampling_type, batch_norm,
+                output_activation, output_type, use_skip, model_type, encoder_multiple_out,
+            )
         return autoencoder, decoder, n_encoder_layer, n_decoder_layer
 
     def build_model_paras(self, **kwargs):
@@ -838,52 +1074,34 @@ class BuildModel(object):
         lr_i = kwargs['i'] if 'i' in kwargs.keys() else None
         lr_j = kwargs['j'] if 'j' in kwargs.keys() else None
         epochs = kwargs['epochs'] if 'epochs' in kwargs.keys() else 2
-        batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else 32
-        if num_model in (1, 2, 3, 4, 7, 8, 9):
-            paras = {'i': lr_i, 'j': lr_j, 'epochs': epochs, 'batch_size': batch_size}
+        batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else None
+        bs_pred = kwargs['bs_pred'] if 'bs_pred' in kwargs.keys() else batch_size
+        if num_model in (1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21):
+            paras = {'i': lr_i, 'j': lr_j, 'epochs': epochs, 'batch_size': batch_size, 'bs_pred': bs_pred}
         elif num_model in (5, 6):
             loss_func = kwargs['loss_func'] if 'loss_func' in kwargs.keys() else vae_loss(z_mean=0., z_log_var=1.)
-            # metrics_func = kwargs['metrics_func'] if ('metrics_func' in kwargs.keys()
-            #                                           ) else [keras.losses.mean_squared_error]
-            # metrics_name = kwargs['metrics_name'] if 'metrics_name' in kwargs.keys() else ['mean_squared_error']
             user_metrics_func = kwargs['user_metrics_func'] if ('user_metrics_func' in kwargs.keys()
                                                                 ) else [vae_loss(z_mean=0., z_log_var=1.)]
             user_metrics_name = kwargs['user_metrics_name'] if 'user_metrics_name' in kwargs.keys() else ['loss']
-            # paras = {'i': lr_i, 'j': lr_j, 'epochs': epochs, 'batch_size': batch_size,
-            #          'loss_func': loss_func, 'metrics_func': metrics_func, 'metrics_name': metrics_name}
             paras = {'i': lr_i, 'j': lr_j, 'epochs': epochs, 'batch_size': batch_size,
                      'loss_func': loss_func, 'metrics_func': user_metrics_func, 'metrics_name': user_metrics_name}
-        if num_model in (8, 9):
-            if hasattr(self, 'chunk_size'):
-                chunk_size = self.chunk_size
-            elif 'chunk_size' in kwargs.keys():
-                chunk_size = kwargs['chunk_size']
-            else:
-                chunk_size = 64
-            self.chunk_size = chunk_size
-            if hasattr(self, 'n_overlapping_chunks'):
-                n_overlapping_chunks = self.n_overlapping_chunks
-            elif 'n_overlapping_chunks' in kwargs.keys():
-                n_overlapping_chunks = kwargs['n_overlapping_chunks']
-            else:
-                input_dim = self.input_dim
-                n_pad_input = self.n_pad_input
-                n_full_chunks = (input_dim + n_pad_input) // chunk_size
-                n_overlapping_chunks = n_full_chunks*2-1
-            self.n_overlapping_chunks = n_overlapping_chunks
-            n_filters = self.n_filters
-            latent_dim = self.latent_dim
-            act_r = self.act_r
-            use_bias = self.use_bias
+
+        if num_model in (10, 11, 12, 13):
             if 'rnn_type' in kwargs.keys() and kwargs['rnn_type'] == 'dprnn':
-                dict_dprnn = {'DprnnBlock': DprnnBlock(is_last_dprnn=False,
-                                                       num_overlapping_chunks=n_overlapping_chunks,
-                                                       chunk_size=chunk_size,
-                                                       num_filters_in_encoder=n_filters,
-                                                       units_per_lstm=latent_dim,
-                                                       act_r=act_r,
-                                                       use_bias=use_bias)}
+                dict_dprnn = {'DprnnBlock': DprnnBlock}
                 paras.update(**dict_dprnn)
+        if num_model in (14, 15, 16, 17, 18, 19):
+            dict_tcn = {'DepthwiseConv1D': DepthwiseConv1D,
+                        'GlobalNormalization': GlobalNormalization,
+                        'tf': tf,
+                        }
+        if num_model in (20, 21):
+            dict_wave_unet = {'AudioClipLayer': AudioClipLayer,
+                              'CropLayer': CropLayer,
+                              'CropConcatLayer': CropConcatLayer,
+                              'InterpolationLayer': InterpolationLayer,
+                              'tf': tf,
+                              }
         return paras
 
 
@@ -908,19 +1126,33 @@ def search_model(path_result, model_name, input_dim, x_dict, z_dict, z_set_name,
     bool_test_ae = kwargs['bool_test_ae'] if 'bool_test_ae' in kwargs.keys() else True
     bool_save_ed = kwargs['bool_save_ed'] if 'bool_save_ed' in kwargs.keys() else True
     bool_test_ed = kwargs['bool_test_ed'] if 'bool_test_ed' in kwargs.keys() else True
+    bool_num_padd = kwargs['bool_num_padd'] if 'bool_num_padd' in kwargs.keys() else False
+    if bool_num_padd:
+        batch_size = kwargs['batch_size']
+        obj_padd_x = PadNumberSampleDict(x_dict, batch_size)
+        obj_padd_z = PadNumberSampleDict(z_dict, batch_size)
+    else:
+        obj_padd_x = None
+        obj_padd_z = None
+
     train_test_ae(autoencoder, decoder, n_encoder_layer, paras,
                   x_dict, z_dict, z_set_name, path_save=path_save,
                   dict_model_load=dict_model_load,
                   bool_train=bool_train, bool_test_ae=bool_test_ae,
-                  bool_save_ed=bool_save_ed, bool_test_ed=bool_test_ed)
+                  bool_save_ed=bool_save_ed, bool_test_ed=bool_test_ed,
+                  bool_num_padd=bool_num_padd, obj_padd_x=obj_padd_x, obj_padd_z=obj_padd_z
+                  )
     bool_clean_weight_file = kwargs['bool_clean_weight_file'] if 'bool_clean_weight_file' in kwargs.keys() else True
     if bool_clean_weight_file:
         model_dirname = kwargs['model_dirname'] if 'model_dirname' in kwargs.keys() else 'auto_model'
-        clear_model_weight_file(os.path.join(path_save, model_dirname))
+        pos_epoch = kwargs['pos_epoch'] if 'pos_epoch' in kwargs.keys() else -2
+        clear_model_weight_file(os.path.join(path_save, model_dirname), pos_epoch)
     bool_test_weight = kwargs['bool_test_weight'] if 'bool_test_weight' in kwargs.keys() else True
     if bool_test_weight:
         bool_test_ae_w = kwargs['bool_test_ae_w'] if 'bool_test_ae_w' in kwargs.keys() else False
         bool_test_ed_w = kwargs['bool_test_ed_w'] if 'bool_test_ed_w' in kwargs.keys() else True
+        if bool_num_padd:
+            x_dict = obj_padd_x.padd_data()
         test_weight_ae(dict(zip(z_dict.keys(), x_dict.values())), n_encoder_layer=n_encoder_layer,
                        path_save=path_save, paras=paras, dict_model_load=dict_model_load,
                        bool_test_ae=bool_test_ae_w, bool_test_ed=bool_test_ed_w)
@@ -962,7 +1194,8 @@ def search_model_continue(fname_model_load, path_result, model_name, input_dim, 
     bool_clean_weight_file = kwargs['bool_clean_weight_file'] if 'bool_clean_weight_file' in kwargs.keys() else True
     if bool_clean_weight_file:
         model_dirname = kwargs['model_dirname'] if 'model_dirname' in kwargs.keys() else 'auto_model'
-        clear_model_weight_file(os.path.join(path_save, model_dirname))
+        pos_epoch = kwargs['pos_epoch'] if 'pos_epoch' in kwargs.keys() else -2
+        clear_model_weight_file(os.path.join(path_save, model_dirname), pos_epoch)
     bool_test_weight = kwargs['bool_test_weight'] if 'bool_test_weight' in kwargs.keys() else True
     if bool_test_weight:
         bool_test_ae_w = kwargs['bool_test_ae_w'] if 'bool_test_ae_w' in kwargs.keys() else False
@@ -979,12 +1212,18 @@ if __name__ == '__main__':
     import json
     import pickle
 
-    import tensorflow as tf
+    import tensorflow
+    if tensorflow.__version__ >= '2.0':
+        import tensorflow.compat.v1 as tf
+        tf.disable_v2_behavior()
+    else:
+        import tensorflow as tf
 
     from prepare_data_shipsear_separation_mix_s0tos3 import PathSourceRootSep
 
     logging.basicConfig(format='%(levelname)s:%(message)s',
                         level=logging.INFO)
+
     np.random.seed(1337)  # for reproducibility
     # The below tf.set_random_seed() will make random number generation in the
     # TensorFlow backend have a well-defined initial state. For further details,
@@ -1012,24 +1251,8 @@ if __name__ == '__main__':
     # SUB_SET_WAY = 'order'
 
     PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
-    PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
-    #  ----------------------------------------------------------------------------------------
-    # only for first time generate data set
-    S_NAMES = json.load(open(os.path.join(PATH_DATA_S, 'dirname.json'), 'r'))['dirname']
-    S_LIST = read_datas(os.path.join(PATH_DATA_S, 's_hdf5'), S_NAMES)
 
-    N_SAMS = S_LIST[0].shape[0]
-    if SUB_SET_WAY == 'rand':
-        with open(os.path.join(PATH_DATA_S, 'randseq.pickle'), 'rb') as f_rb:
-            nums_seq = pickle.load(f_rb)
-    elif SUB_SET_WAY == 'order':
-        nums_seq = list(range(N_SAMS))
-
-    nums = subset_seq(nums_seq, [3055, 1018, 1020])
-
-    z_sets_ns_create(S_LIST, nums, SCALER_DATA, PATH_DATA)
-    #  ----------------------------------------------------------------------------------------
     SET_NAMES = ['train', 'val', 'test']
     S_NAMES = []  # [n_source][n_set]
     for i in range(0, 4):
@@ -1041,9 +1264,6 @@ if __name__ == '__main__':
         DATA_DICT.append(dict(zip(s_names_j, s_list_j)))
 
     PATH_RESULT = '../result_separation_ae_ns_single'
-    mkdir(PATH_RESULT)
-
-    PATH_RESULT_CONTINUE = '../result_separation_ae_ns_single_continue'
     mkdir(PATH_RESULT)
 
     # lr_i_j = [(i, j) for i in range(1, 2) for j in range(-4, -5, -1)]
@@ -1105,13 +1325,13 @@ if __name__ == '__main__':
             #                  'bool_save_ed': True, 'bool_test_ed': True,
             #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
 
-            search_model(PATH_RESULT, 'model_8_2_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-                         **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-                             'n_conv_encoder': 1, 'n_filters': 64,
-                             'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
-                             'bool_train': True, 'bool_test_ae': True,
-                             'bool_save_ed': True, 'bool_test_ed': True,
-                             'bool_clean_weight_file': True, 'bool_test_weight': True})
+            # search_model(PATH_RESULT, 'model_8_2_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
+            #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+            #                  'n_conv_encoder': 1, 'n_filters': 64,
+            #                  'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
+            #                  'bool_train': True, 'bool_test_ae': True,
+            #                  'bool_save_ed': True, 'bool_test_ed': True,
+            #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
 
             # search_model(PATH_RESULT, 'model_8_2_2', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
             #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
@@ -1152,5 +1372,48 @@ if __name__ == '__main__':
             #                  'bool_train': True, 'bool_test_ae': True,
             #                  'bool_save_ed': True, 'bool_test_ed': True,
             #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
+
+            # model_13 multiple decoder RNN TasNet without mask
+            search_model(PATH_RESULT, 'model_13_2_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
+                         **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'BLSTM', 'latent_dim': 200,
+                             'n_block_encoder': 1, 'n_block_decoder': 1,
+                             'model_type': 'ae', 'is_multiple_decoder': True, 'use_mask': False, 'n_outputs': 1,
+                             'bool_train': True, 'bool_test_ae': True,
+                             'bool_save_ed': True, 'bool_test_ed': True,
+                             'bool_clean_weight_file': True, 'bool_test_weight': True})
+
+            search_model(PATH_RESULT, 'model_13_3_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
+                         **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'dprnn', 'latent_dim': 200,
+                             'n_block_encoder': 1, 'n_block_decoder': 1,
+                             'model_type': 'ae', 'is_multiple_decoder': True, 'use_mask': False, 'n_outputs': 1,
+                             'bool_train': True, 'bool_test_ae': True,
+                             'bool_save_ed': True, 'bool_test_ed': True,
+                             'bool_clean_weight_file': True, 'bool_test_weight': True})
+
+            # Multiple-Decoder Conv-Tasnet without mask
+            search_model(PATH_RESULT, 'model_15_2_6', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
+                         **{'i': lr_i, 'j': lr_j, 'epochs': 200, 'batch_size': 6, 'bs_pred': 6,
+                            'n_conv_encoder': 1, 'n_filters_encoder': 64,
+                            'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
+                            'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
+                            # 'output_activation': 'tanh',
+                            'model_type': 'ae', 'is_multiple_decoder': True, 'use_mask': False, 'n_outputs': 1,
+                            'bool_train': True, 'bool_test_ae': True,
+                            'bool_save_ed': True, 'bool_test_ed': True,
+                            'bool_clean_weight_file': True, 'bool_test_weight': True})
+
+            # Multiple-Decoder Wave-U-Net without skip connections
+            search_model(PATH_RESULT, 'model_21_6_10', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
+                         **{'i': lr_i, 'j': lr_j, 'epochs': 800, 'batch_size': 16, 'bs_pred': 16,
+                            'n_pad_input': 13, 'num_layers': 4, 'batch_norm': True,
+                            'use_skip': False, 'output_type': 'direct', 'output_activation': 'tanh',
+                            'model_type': 'ae', 'is_multiple_decoder': True, 'n_outputs': 1,
+                            'bool_train': True, 'bool_test_ae': True,
+                            'bool_save_ed': True, 'bool_test_ed': True,
+                            'bool_clean_weight_file': True, 'bool_test_weight': True})
 
     logging.info('finished')

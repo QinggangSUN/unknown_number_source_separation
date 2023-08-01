@@ -30,10 +30,19 @@ def index_mix_src_ns(n_src):
 
 
 if __name__ == '__main__':
-    from keras import backend as K
     import logging
     import os
-    import tensorflow as tf
+
+    import tensorflow
+    if tensorflow.__version__ >= '2.0':
+        import tensorflow.compat.v1 as tf
+        tf.disable_v2_behavior()
+        from tensorflow import keras
+        import tensorflow.compat.v1.keras.backend as K
+    else:
+        import tensorflow as tf
+        import keras
+        from keras import backend as K
 
     from file_operation import mkdir
     from prepare_data_shipsear_recognition_mix_s0tos3 import read_datas

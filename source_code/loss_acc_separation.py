@@ -9,10 +9,17 @@ E-mail: sun10qinggang@163.com
 """
 # pylint: disable=too-many-function-args
 import random as python_random
-import keras
-from keras import backend as K      # pylint: disable=unused-import
 import numpy as np
-import tensorflow as tf
+import tensorflow
+if tensorflow.__version__ >= '2.0':
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+    from tensorflow import keras
+    import tensorflow.compat.v1.keras.backend as K
+else:
+    import tensorflow as tf
+    import keras
+    from keras import backend as K
 
 python_random.seed(123)  # for reproducibility
 np.random.seed(1337)  # for reproducibility

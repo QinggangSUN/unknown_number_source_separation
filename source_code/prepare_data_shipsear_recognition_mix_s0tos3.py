@@ -6,7 +6,7 @@ Created on Thu Aug  9 20:34:30 2018
 
 E-mail: sun10qinggang@163.com
 
-    balance sources first, than full combination mix without s0
+    balance sources first, then full combination mix without s0
 """
 # pylint: disable=attribute-defined-outside-init, import-outside-toplevel, invalid-name
 # pylint: disable=line-too-long, no-member, redefined-outer-name, reimported
@@ -16,7 +16,11 @@ E-mail: sun10qinggang@163.com
 import logging
 import os
 
+import librosa
+import numpy as np
+
 from error import ParameterError
+from feature_extract import feature_extract
 
 _SR = 52734
 _IS_MONO = True
@@ -221,7 +225,7 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
         if self._form_src == 'wav':
             self._path_source_root = os.path.join(self._get_path_mix_root(
             ), 'wavmat')  # pylint: disable=attribute-defined-outside-init
-        elif self._form_src in {'magspectrum', 'angspectrum', 'realspectrum', 'imgspectrum'}:
+        elif self._form_src in {'magspectrum', 'angspectrum', 'phase_spectrum', 'realspectrum', 'imgspectrum'}:
             if not hasattr(self, '_win_length'):
                 self._win_length = get_win_length()
             if not hasattr(self, '_hop_length'):
@@ -507,7 +511,7 @@ def read_data(path, file_name, form_src='hdf5', dict_key='data', data_type=None,
     def str_remove_end(file_name, file_type):
         """Remove files' name extension.
         Args:
-            file_names (list[str]): list of file names.
+            file_name (str): file name.
             file_type (str): file name extension.
         Returns:
             file_names_small (list[str]): list of file names without extension.
@@ -597,11 +601,12 @@ def compute_chunk_size(data, chunk_type, dims=None):
     Args:
         data (np.ndarray): data to save.
         chunk_type (str): chunk size selected.
+        dims (int): number of indexes.
     Returns:
         chunk_size (tuple(int)): chunk size to save.
     """
     if chunk_type == 'back_dim':
-        chunk_size = (1,)+data.shape[1:]
+        chunk_size = (1,)+tuple(data[0].shape)
     elif chunk_type == 'last_dim':
         chunk_size = (data.ndim-1)*(1,)+data.shape[-1:]
     elif chunk_type == 'back_n':
@@ -640,7 +645,7 @@ def save_datas(set_dict, path_save, **kwargs):
     save_key2 = 'sij'
     chunk_type = 'back_dim'
     mode_csv = 'array'
-
+    batch_num = 200
     for key, value in kwargs.items():
         if key == 'form_save':
             form_save = value
@@ -648,6 +653,8 @@ def save_datas(set_dict, path_save, **kwargs):
             dtype = value
         elif key == 'mode_batch':
             mode_batch = value
+        elif key == 'batch_num':
+            batch_num = value
         elif key == 'file_name':
             file_name = value
         elif key == 'save_key':
@@ -679,36 +686,49 @@ def save_datas(set_dict, path_save, **kwargs):
                         save_key, data=data_i, dtype=dtype,
                         chunks=chunk_size_i,
                         compression="gzip", compression_opts=9)
-        elif mode_batch == 'batch':
+        elif mode_batch == 'batch':  # warning, file will only reshape in this mode instead of creating new file
             filters = tables.Filters(complevel=9, complib='blosc')
             for name_i, data_i in set_dict.items():
                 file_name_i = os.path.join(path_save, f'{name_i}.hdf5')
                 chunk_size_i = compute_chunk_size(data_i, chunk_type)
-                with tables.open_file(file_name_i, 'a') as f_w:
-                    if save_key not in f_w.root:
-                        data_earray = f_w.create_earray(f_w.root, save_key,
+                with tables.open_file(file_name_i, 'a') as f_a:
+                    if save_key not in f_a.root:
+                        data_earray = f_a.create_earray(f_a.root, save_key,
                                                         atom=tables.Atom.from_dtype(dtype),
                                                         shape=((0,)+data_i.shape[1:]),
                                                         chunkshape=chunk_size_i,
                                                         filters=filters)
                     else:
-                        data_earray = getattr(f_w.root, save_key)
+                        data_earray = getattr(f_a.root, save_key)
                     data_earray.append(data_i)
         elif mode_batch == 'batch_h5py':
             for name_i, data_i in set_dict.items():
                 file_name_i = os.path.join(path_save, f'{name_i}.hdf5')
                 chunk_size_i = compute_chunk_size(data_i, chunk_type)
-                if not os.path.isfile(file_name_i):
+                dim_0_i = len(data_i) if isinstance(data_i, (list, tuple)) else data_i.shape[0]
+                if batch_num < dim_0_i:
+                    for j in range(0, dim_0_i, batch_num):
+                        if j+batch_num > dim_0_i:
+                            data_j = np.asarray(data_i[j:], dtype=dtype)
+                        else:
+                            data_j = np.asarray(data_i[j:j+batch_num], dtype=dtype)
+                        if j == 0:
+                            with h5py.File(file_name_i, 'w') as f_w:
+                                f_w.create_dataset(
+                                    save_key, data=data_j, dtype=dtype,
+                                    chunks=chunk_size_i,
+                                    maxshape=((None,)+data_j.shape[1:]),
+                                    compression="gzip", compression_opts=9)
+                        else:
+                            with h5py.File(file_name_i, 'a') as f_a:
+                                f_a[save_key].resize((f_a[save_key].shape[0]+data_j.shape[0]), axis=0)
+                                f_a[save_key][-data_j.shape[0]:] = data_j
+                else:
                     with h5py.File(file_name_i, 'w') as f_w:
                         f_w.create_dataset(
                             save_key, data=data_i, dtype=dtype,
                             chunks=chunk_size_i,
-                            maxshape=((None,)+data_i.shape[1:]),
                             compression="gzip", compression_opts=9)
-                else:
-                    with h5py.File(file_name_i, 'a') as f_a:
-                        f_a[save_key].resize((f_a[save_key].shape[0]+data_i.shape[0]), axis=0)
-                        f_a[save_key][-data_i.shape[0]:] = data_i
         elif mode_batch == 'one_file_no_chunk':
             full_file_name = os.path.join(path_save, f'{file_name}.hdf5')
             with h5py.File(full_file_name, 'a') as f_a:
@@ -815,6 +835,8 @@ def concat_h5py(fname_1, fname_2, fname_new, create_h5py=False, axis=0, save_key
         fname_1 (str): full file name with path of data 1.
         fname_2 (str): full file name with path of data 2.
         fname_new (str): full file name with path of new data concatenated of data 1 and data 2.
+        create_h5py (bool, optional): wether creating .hdf files. Defaults to False.
+        axis (int, optional): axis of data array. Defaults to 0.
         save_key (str, optional): keyword of the data to save to file. Defaults to 'data'.
         mode_batch (str, optional): mode of saving data to file by batch. Defaults to 'batch_h5py'.
         batch_num (int, optional): number of the batch to save data. Defaults to 200.

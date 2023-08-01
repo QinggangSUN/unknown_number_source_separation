@@ -30,6 +30,7 @@ def output_history(  # pylint: disable=too-many-arguments
         plt.show()
     plt.close()
 
+
 def output_signals(  # pylint: disable=too-many-arguments
         time, y_out, colors=None, lss=None,
         savename=None, show=False, label_y='y'):
@@ -50,22 +51,28 @@ def output_signals(  # pylint: disable=too-many-arguments
         plt.show()
     plt.close()
 
-def save_model_struct(model, path_save, model_name):
+
+def save_model_struct(model, path_save, model_name, show_shapes=True, show_layer_names=True, save_json=True):
     """Save keras model struct to txt and json files."""
     import os
     import json
-    from keras.utils import plot_model
+    from keras.utils import np_utils, plot_model
 
     from contextlib import redirect_stdout
 
     with open(os.path.join(path_save, f'{model_name}.txt'), 'w') as f_w:
         with redirect_stdout(f_w):
             model.summary()
+    import keras
+    if keras.__version__ >= '2.4.3':
+        plot_model(model, to_file=os.path.join(path_save, f'{model_name}.pdf'))
+    else:
+        plot_model(model, to_file=os.path.join(path_save, f'{model_name}.svg'))
 
-    plot_model(model, to_file=os.path.join(path_save, f'{model_name}.svg'))
+    if save_json:
+        with open(os.path.join(path_save, f'{model_name}.json'), 'w', encoding='utf-8') as f_w:
+            json.dump(model.to_json(), f_w)
 
-    with open(os.path.join(path_save, f'{model_name}.json'), 'w', encoding='utf-8') as f_w:
-        json.dump(model.to_json(), f_w)
 
 def save_keras_model(model, filepath, mode=0, **kwargs):
     """Save keras model to disk.
@@ -83,6 +90,7 @@ def save_keras_model(model, filepath, mode=0, **kwargs):
             json.dump(model.to_json(), f_w)
     elif mode == 2:  # save model weights
         model.save_weights(filepath, **kwargs)
+
 
 def load_keras_model(filepath, mode=0, **kwargs):
     """Load keras model from disk.

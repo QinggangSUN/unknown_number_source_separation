@@ -23,6 +23,7 @@ from prepare_data import list_transpose
 from prepare_data_shipsear_recognition_mix_s0tos3 import read_data
 from see_metric_autoencoder import compute_metric, compute_sdr, compute_si_sdr, display_metric
 from see_metric_autoencoder import metric_mean_src_to_file, metric_mean_to_csv, save_metric
+from see_metric_autoencoder import recover_pad_num_samples, recover_pad_num_samples_list
 from see_metric_single_source_ae_ns import data_reshape_same
 
 
@@ -148,21 +149,13 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, sm_index, 
         sm_index (list[tuple]): clean target source of mixed sources, e.g. [(1, 2),...,(1,2,3)].
         set_names (list[str]): list of names of sets, e.g. ['train', 'val', 'test'].
     """
-    # name_source_models = object_decoded_files.name_source_models  # [source][model]
-    # path_source_models = object_decoded_files.path_source_models  # [source][model]
-    # path_source_model_srcs = object_decoded_files.path_source_model_srcs  # [source][model][src]
-    # path_source_model_src_paras = object_decoded_files.path_source_model_src_paras  # [source][model][src][para_name]
-    # name_source_model_src_paras = object_decoded_files.name_source_model_src_paras  # [source][model][src][para_name]
-    # path_weight_files = object_decoded_files.path_weight_files  # [source][model][src][para_name][weight_file]
     name_weight_files = object_decoded_files.name_weight_files  # [source][model][src][para_name][weight_file]
     path_out_models = object_decoded_files.path_out_models  # [source][model][src][para_name]
-    # path_metrics = object_decoded_files.path_metrics  # [source][model]
     path_metrics_paras = object_decoded_files.path_metrics_paras  # [source][model][para_name]
 
     for name_weight_files_i, path_metrics_para_i, path_out_model_i, sm_index_i in zip(  # level i: [source]
             name_weight_files, path_metrics_paras, path_out_models, sm_index):
         src_name_set_i = [s_names[k] for k in sm_index_i]  # [src][set]
-        # set_src_name_i = list_transpose(src_name_set_i, warn=True)  # [set][src]
         src_name_i = [src_names[k] for k in sm_index_i]  # [src]
         s_data_i = [s_data[k] for k in sm_index_i]  # [src][set]
         data_s_i = list_transpose(s_data_i, warn=True)  # [set][src]
@@ -184,11 +177,12 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, sm_index, 
                     name_weight_file_m = name_weight_files_l[-1]  # level m: [weight_file]
                     data_sp_l = []
                     for src_name_set_n in src_name_set_l:  # level n: [set]
-                        # path_sp_l = os.path.join(path_out_model_l, f'{src_name_set_n}_{name_weight_file_m}_decoded')
                         path_sp_l = os.path.join(path_out_model_l,
                                                  f'{src_name_set_n}_autodecoded_{name_weight_file_m}.hdf5')
                         data_sp_l.append(read_data(os.path.dirname(path_sp_l), os.path.basename(path_sp_l)))
                     data_sp_k.append(data_sp_l)
+
+                    data_sp_l = recover_pad_num_samples_list(data_s_l, data_sp_l)
 
                     mse_list, mse_mean = compute_metric(data_s_l, data_sp_l, mse_np)
                     display_metric(mse_list, path_metric_para_l, set_names,
@@ -215,12 +209,14 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, sm_index, 
 
                 for data_s_n, data_sp_n, set_name_n in zip(
                         data_s_i, data_sp_k, set_names):
-                    data_s_n = np.asarray(data_s_n).transpose(1, 0, 3, 2)
+                    data_s_n = np.asarray(data_s_n).transpose((1, 0, 3, 2))
                     # (n_src, n_sams, 1, fl)->(n_sams, n_src, fl, 1)
                     data_sp_n = np.asarray(data_sp_n)
                     if data_sp_n.ndim == 3:
                         data_sp_n = np.expand_dims(data_sp_n, -2)  # (n_src, n_sams, 1, fl)
-                    data_sp_n = data_sp_n.transpose(1, 0, 3, 2)  # ->(n_sams, n_src, fl, 1)
+                    data_sp_n = data_sp_n.transpose((1, 0, 3, 2))  # ->(n_sams, n_src, fl, 1)
+
+                    data_sp_n = recover_pad_num_samples(data_s_n, data_sp_n)
 
                     if tuple(data_s_n.shape) != tuple(data_sp_n.shape):
                         data_s_n, data_sp_n = data_reshape_same(data_s_n, data_sp_n)
@@ -231,9 +227,9 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, sm_index, 
                                 save_name=[f'sdr_{set_name_n}', f'isr_{set_name_n}',
                                            f'sir_{set_name_n}', f'sar_{set_name_n}'])
 
-                    data_s_n = data_s_n.transpose(0, 2, 3, 1)
+                    data_s_n = data_s_n.transpose((0, 2, 3, 1))
                     # (n_sams, n_src, fl, 1) -> (n_sams, fl, n_channel, n_src)
-                    data_sp_n = data_sp_n.transpose(0, 2, 3, 1)
+                    data_sp_n = data_sp_n.transpose((0, 2, 3, 1))
                     # (n_sams, n_src, fl, 1) -> (n_sams, fl, n_channel, n_src)
 
                     compute_si_sdr(data_s_n, data_sp_n, True, path_metric_para_k,
@@ -260,7 +256,6 @@ def metric_mean_mix_to_file(path_metric, set_names, metric_keys, path_save):
     for metric_key in metric_keys:
         f_h5 = h5py.File(os.path.join(path_save, f'{metric_key}_mean.hdf5'), 'a')
         dir_names = list_dirs(path_metric, False)
-        # dir_names = [name for name in dir_names if os.path.isdir(os.path.join(path_metric, name))]
         for dir_name in dir_names:
             grp_dir = f_h5.create_group(dir_name)
             path_metric_dir = os.path.join(path_metric, dir_name)
@@ -310,9 +305,7 @@ if __name__ == '__main__':
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
-    # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
-    # SUB_SET_WAY = 'order'
 
     PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root

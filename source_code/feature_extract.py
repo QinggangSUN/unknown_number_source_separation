@@ -22,9 +22,9 @@ def subframe_np(sources, fl, fs, scale=False):  # pylint: disable=invalid-name
         frames (list[np.ndarray,shape==(n_samples, fl)]): frames after cut.
     """
     if scale is True:  # scale from [-1,1] to [0,1]
-        for si in sources:  # pylint: disable=invalid-name
-            si = si + 1.0  # pylint: disable=invalid-name
-            si = si * 0.5  # pylint: disable=invalid-name
+        for i in range(len(sources)):
+            sources[i] = sources[i] + 1.0
+            sources[i] = sources[i] * 0.5
     if librosa.__version__ >= '0.7.1':
         frames = [librosa.util.frame(si, fl, fs, axis=0) for si in sources]  # pylint: disable=unexpected-keyword-arg
     else:

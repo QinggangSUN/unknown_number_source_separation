@@ -22,9 +22,7 @@ if __name__ == '__main__':
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
-    # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
-    # SUB_SET_WAY = 'order'
 
     PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root
@@ -52,9 +50,27 @@ if __name__ == '__main__':
     SM_NAMES = [f'Z_{i}_zero' for i in range(4, 8)]
 
     PATH_SAVE_ROOT = '../result_separation_ae_ns_single/model_8_2_1/load_decoder'
-
     object_decoded_files = ListDecodedFiles(PATH_SAVE_ROOT, Z_SRC_NAME)
+    compute_metrics(object_decoded_files, Z_NAMES, Z_SRC_NAMES, Z_SRC_NAMES[:4],
+                    Z_DATA, SM_INDEX, SET_NAMES, 'autodecoded', Y_DATA, LABELS_N_HOT)
 
+    PATH_SAVE_ROOT = '../result_separation_ae_ns_single/model_13_2_1/load_decoder'
+    object_decoded_files = ListDecodedFiles(PATH_SAVE_ROOT, Z_SRC_NAME)
+    compute_metrics(object_decoded_files, Z_NAMES, Z_SRC_NAMES, Z_SRC_NAMES[:4],
+                    Z_DATA, SM_INDEX, SET_NAMES, 'autodecoded', Y_DATA, LABELS_N_HOT)
+
+    PATH_SAVE_ROOT = '../result_separation_ae_ns_single/model_13_3_1/load_decoder'
+    object_decoded_files = ListDecodedFiles(PATH_SAVE_ROOT, Z_SRC_NAME)
+    compute_metrics(object_decoded_files, Z_NAMES, Z_SRC_NAMES, Z_SRC_NAMES[:4],
+                    Z_DATA, SM_INDEX, SET_NAMES, 'autodecoded', Y_DATA, LABELS_N_HOT)
+
+    PATH_SAVE_ROOT = '../result_separation_ae_ns_single/model_15_2_6/load_decoder'
+    object_decoded_files = ListDecodedFiles(PATH_SAVE_ROOT, Z_SRC_NAME)
+    compute_metrics(object_decoded_files, Z_NAMES, Z_SRC_NAMES, Z_SRC_NAMES[:4],
+                    Z_DATA, SM_INDEX, SET_NAMES, 'autodecoded', Y_DATA, LABELS_N_HOT)
+
+    PATH_SAVE_ROOT = '../result_separation_ae_ns_single/model_21_6_10/load_decoder'
+    object_decoded_files = ListDecodedFiles(PATH_SAVE_ROOT, Z_SRC_NAME)
     compute_metrics(object_decoded_files, Z_NAMES, Z_SRC_NAMES, Z_SRC_NAMES[:4],
                     Z_DATA, SM_INDEX, SET_NAMES, 'autodecoded', Y_DATA, LABELS_N_HOT)
 

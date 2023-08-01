@@ -13,9 +13,17 @@ E-mail: sun10qinggang@163.com
 if __name__ == '__main__':
     import logging
 
-    from keras import backend as K
     import numpy as np
-    import tensorflow as tf
+    import tensorflow
+    if tensorflow.__version__ >= '2.0':
+        import tensorflow.compat.v1 as tf
+        tf.disable_v2_behavior()
+        # from tensorflow import keras
+        import tensorflow.compat.v1.keras.backend as K
+    else:
+        import tensorflow as tf
+        import keras
+        from keras import backend as K
 
     from file_operation import mkdir
     from prepare_data_shipsear_recognition_mix_s0tos3 import read_datas
@@ -84,7 +92,7 @@ if __name__ == '__main__':
                 logging.debug(f'x_i.shape {x_dict_i[key].shape}')
 
             for key, value in z_dict_i.items():
-                z_dict_i[key] = np.squeeze(value).transpose(0, 2, 1)  # -> (nsamples, frame_length, 4)
+                z_dict_i[key] = np.squeeze(value).transpose((0, 2, 1))  # -> (nsamples, frame_length, 4)
                 logging.debug(f'z_i.name {key}')
                 logging.debug(f'z_i.shape {z_dict_i[key].shape}')
 
@@ -93,21 +101,91 @@ if __name__ == '__main__':
                 logging.debug(f'x_i.name {key}')
                 logging.debug(f'x_i.shape {x_dict_i[key].shape}')
 
-            search_model(PATH_RESULT, 'model_8_2_1', input_dim, x_dict_i, z_dict_i, None,
-                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 50, 'batch_size': 8, 'bs_pred': 8,
-                             'n_conv_encoder': 1, 'n_filters': 64,
-                             'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
-                             'bool_train': True, 'bool_test_ae': False,
-                             'bool_save_ed': False, 'bool_test_ed': False,
-                             'bool_clean_weight_file': True, 'bool_test_weight': True,
-                             'bool_test_ae_w': True, 'bool_test_ed_w': False})
+            # search_model(PATH_RESULT, 'model_8_2_1', input_dim, x_dict_i, z_dict_i, None,
+            #              **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+            #                  'n_conv_encoder': 1, 'n_filters': 64,
+            #                  'rnn_type': 'BLSTM', 'latent_dim': 200, 'n_rnn_decoder': 1,
+            #                  'bool_train': True, 'bool_test_ae': False,
+            #                  'bool_save_ed': False, 'bool_test_ed': False,
+            #                  'bool_clean_weight_file': True, 'bool_test_weight': True,
+            #                  'bool_test_ae_w': True, 'bool_test_ed_w': False})
 
             # search_model(PATH_RESULT, 'model_8_4_1', input_dim, x_dict_i, z_dict_i, None,
-            #              **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 50, 'batch_size': 8, 'bs_pred': 8,
+            #              **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
             #                  'n_conv_encoder': 1, 'n_filters': 64, 'use_bias': False,
             #                  'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
             #                  'bool_train': True, 'bool_test_ae': False,
             #                  'bool_save_ed': False, 'bool_test_ed': False,
             #                  'bool_clean_weight_file': True, 'bool_test_weight': True,
             #                  'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
+            # model_10 RNN TasNet
+            search_model(PATH_RESULT, 'model_10_2_1', input_dim, x_dict_i, z_dict_i, None,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'BLSTM', 'latent_dim': 200,
+                             'n_block_encoder': 1,  'n_block_decoder': 1,
+                             'bool_train': True, 'bool_test_ae': False,
+                             'bool_save_ed': False, 'bool_test_ed': False,
+                             'bool_clean_weight_file': True, 'bool_test_weight': True,
+                             'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
+            search_model(PATH_RESULT, 'model_10_3_1', input_dim, x_dict_i, z_dict_i, None,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'dprnn', 'latent_dim': 200,
+                             'n_block_encoder': 1,  'n_block_decoder': 1,
+                             'bool_train': True, 'bool_test_ae': False,
+                             'bool_save_ed': False, 'bool_test_ed': False,
+                             'bool_clean_weight_file': True, 'bool_test_weight': True,
+                             'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
+            # # model_12 RNN TasNet without mask
+            search_model(PATH_RESULT, 'model_13_2_1', input_dim, x_dict_i, z_dict_i, None,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'BLSTM', 'latent_dim': 200,
+                             'n_block_encoder': 1,  'n_block_decoder': 1,
+                             'is_multiple_decoder': True, 'use_mask': False,
+                             'bool_train': True, 'bool_test_ae': False,
+                             'bool_save_ed': False, 'bool_test_ed': False,
+                             'bool_clean_weight_file': True, 'bool_test_weight': True,
+                             'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
+            search_model(PATH_RESULT, 'model_13_3_1', input_dim, x_dict_i, z_dict_i, None,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'dprnn', 'latent_dim': 200,
+                             'n_block_encoder': 1,  'n_block_decoder': 1,
+                             'is_multiple_decoder': True, 'use_mask': False,
+                             'bool_train': True, 'bool_test_ae': False,
+                             'bool_save_ed': False, 'bool_test_ed': False,
+                             'bool_clean_weight_file': True, 'bool_test_weight': True,
+                             'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
+            # Multiple-Decoder Conv-Tasnet without mask
+            search_model(PATH_RESULT, 'model_15_2_6', input_dim, x_dict_i, z_dict_i, None,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4,
+                            'epochs': 200, 'batch_size': 6, 'bs_pred': 6,
+                            'is_multiple_decoder': True, 'use_mask': False,
+                            'n_conv_encoder': 1, 'n_filters_encoder': 64,
+                            'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
+                            'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
+                            'bool_train': True, 'bool_test_ae': False,
+                            'bool_save_ed': False, 'bool_test_ed': False,
+                            'bool_clean_weight_file': True, 'bool_test_weight': True,
+                            'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
+            # Multiple-Decoder Wave-U-Net without skip connections
+            search_model(PATH_RESULT, 'model_21_6_10', input_dim, x_dict_i, z_dict_i, None,
+                         **{'i': lr_i, 'j': -4, 'n_outputs': 4,
+                            'epochs': 800, 'batch_size': 16, 'bs_pred': 16,
+                            'n_pad_input': 13, 'num_layers': 4, 'batch_norm': True,
+                            'use_skip': False, 'output_type': 'direct', 'output_activation': 'tanh',
+                            'is_multiple_decoder': True,
+                            'bool_train': True, 'bool_test_ae': False,
+                            'bool_save_ed': False, 'bool_test_ed': False,
+                            'bool_clean_weight_file': True, 'bool_test_weight': True,
+                            'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
     logging.info('finished')

@@ -26,8 +26,10 @@ Please cite this work in your publications as :
 	separation_mix_shipsear_s0tos3_preprocess.py
    to preprocess datas.
 4. Experiments:
-	(1) Unknown numbers of source separation.
+	(0) Known numbers of source separation with multiple autoencoders.
 		train_separation_multiple_autoencoder.py
+	(1) Known numbers of source separation with multiple output autoencoders.
+		train_separation_known_number.py
 	(2) Algorithm 1.
 		train_separation_one_autoencoder.py
 	(3) Algorithm 2.
@@ -42,5 +44,13 @@ Please cite the original work as :
 [Generative sourceseparation with GANs](https://github.com/ycemsubakan/sourceseparation_misc#generative-sourceseparation-with-gans)  
 [Two-Step Sound Source Separation: Training on Learned Latent Targets](https://github.com/etzinis/two_step_mask_learning#two-step-sound-source-separation-training-on-learned-latent-targets)  
 [Dual-Path RNN for Single-Channel Speech Separation](https://github.com/sp-uhh/dual-path-rnn#dual-path-rnn-for-single-channel-speech-separation-in-keras-tensorflow2)  
+[Dual-Path RNN for Single-Channel Speech Separation (in Keras-Tensorflow2)](https://github.com/sp-uhh/dual-path-rnn)  
+[Conv-TasNet: Surpassing Ideal Time–Frequency Magnitude Masking for Speech Separation](https://github.com/naplab/Conv-TasNet#conv-tasnet-surpassing-ideal-timefrequency-magnitude-masking-for-speech-separation)  
+[conv-tasnet](https://github.com/helianvine/conv-tasnet)  
+[Deep Learning for Blind Source Separation](https://github.com/ishine/tf2-ConvTasNet)  
+[Conv-TasNet](https://github.com/kaparoo/Conv-TasNet)  
+[Conv-TasNet](https://github.com/shunyaoshih/Conv-TasNet)  
+[Wave-U-Net](https://github.com/f90/Wave-U-Net)  
+[Wave-U-net-TF2](https://github.com/satvik-venkatesh/Wave-U-net-TF2)  
 [Sound Separation](https://github.com/google-research/sound-separation)  
 [bsseval](https://github.com/sigsep/bsseval)  

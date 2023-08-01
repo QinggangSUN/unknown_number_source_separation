@@ -21,6 +21,7 @@ from prepare_data_shipsear_recognition_mix_s0tos3 import read_data, read_datas
 
 from see_metric_autoencoder import save_metric, compute_metric, display_metric, compute_sdr
 from see_metric_autoencoder import compute_si_sdr
+from see_metric_autoencoder import recover_pad_num_samples, recover_pad_num_samples_list
 from see_metric_single_source_ae_ns import data_reshape_same
 
 
@@ -79,9 +80,6 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
         for k in sm_index_i:
             sz_index_i.remove(k)
         src_name_sz_i = [src_names[k] for k in sz_index_i]  # [src] zero output channels
-        # data_sz_i = [[np.asarray(data_s_i)[:, k, :, :] for k in sz_index_i]
-        #              for data_s_i in data_s_filter_i]  # [set][src]
-        # sz_data_i = list_transpose(data_sz_i, warn=True)  # [src][set](nsams, channel=1, fl)
 
         for name_weight_files_j, path_metrics_para_j, path_out_model_j in zip(  # level j: [model]
                 name_weight_files, path_metrics_paras, path_out_models):
@@ -119,6 +117,8 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                         for k, (data_s_l_k, data_sp_l_k) in enumerate(zip(data_s_l, data_sp_l)):
                             data_sp_l_t.append(data_reshape_same(data_s_l_k, data_sp_l_k)[1])  # (nsams, channel=1, fl)
 
+                        data_sp_l_t = recover_pad_num_samples_list(data_s_l, data_sp_l_t)
+
                         mse_list, mse_mean = compute_metric(data_s_l, data_sp_l_t, mse_np)
                         display_metric(mse_list, path_metric_para_l, set_names,
                                        # hist_bins=(0, 1e-1, 10),
@@ -137,6 +137,8 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                         data_sp_l_t = []  # [set](nsams, channel=1, fl)
                         for k, (data_s_l_k, data_sp_l_k) in enumerate(zip(data_s_l, data_sp_l)):
                             data_sp_l_t.append(data_reshape_same(data_s_l_k, data_sp_l_k)[1])  # (nsams, channel=1, fl)
+
+                        data_sp_l_t = recover_pad_num_samples_list(data_s_l, data_sp_l_t)
 
                         sr_list, sr_mean = compute_metric(data_s_l, data_sp_l_t, samerate_acc_np)
                         display_metric(sr_list, path_metric_para_l, set_names,
@@ -158,7 +160,6 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                     for data_sp_l, src_name_sz_l in zip(sp_data_sz_i, src_name_sz_i):   # [set] in [src][set]
                         path_metric_para_l = os.path.join(path_metric_para_i, src_name_sz_l)
-                        # mkdir(path_metric_para_l)
 
                         for data_s_l_lj, src_name_l_lj in zip(sm_data_i, src_name_sm_i):   # [set] in [src][set]
                             path_metric_para_l_lj = os.path.join(path_metric_para_l, src_name_l_lj)
@@ -167,6 +168,8 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                             data_sp_l_t = []  # [set](nsams, channel=1, fl)
                             for k, (data_s_l_lj_k, data_sp_l_k) in enumerate(zip(data_s_l_lj, data_sp_l)):
                                 data_sp_l_t.append(data_reshape_same(data_s_l_lj_k, data_sp_l_k)[1])
+
+                            data_sp_l_t = recover_pad_num_samples_list(data_s_l_lj, data_sp_l_t)
 
                             sr_list, sr_mean = compute_metric(data_s_l_lj, data_sp_l_t, samerate_acc_np)
                             display_metric(sr_list, path_metric_para_l_lj, set_names,
@@ -183,7 +186,6 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                                         {'si_snr': dict(zip(set_names, si_snr_list))})
 
                     if len(sm_index_i) > 1:
-                        # data_s_i_c = list_transpose(s_data_sm_i)  # [set][src](n_sams, nsrc=1, fl)
                         data_sp_sm_i_c = list_transpose(sp_data_sm_i)  # [set][src](n_sams, fl, nsrc=1)
 
                         for data_s_n, data_sp_n, set_name_n in zip(
@@ -196,7 +198,9 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                                 data_s_n = np.expand_dims(data_s_n, -1)  # (n_sams, nsrc, fl, channel=1)
                             if data_sp_n.ndim == 3:
                                 data_sp_n = np.expand_dims(data_sp_n, -1)  # (n_sams, fl, nsrc, channel=1)
-                            data_sp_n = data_sp_n.transpose(0, 2, 1, 3)  # (n_sams, nsrc=4, fl, channel=1)
+                            data_sp_n = data_sp_n.transpose((0, 2, 1, 3))  # (n_sams, nsrc=4, fl, channel=1)
+
+                            data_sp_n = recover_pad_num_samples(data_s_n, data_sp_n)
 
                             compute_sdr(data_s_n, data_sp_n, path_metric_para_i,
                                         [f'sdr_{set_name_n}', f'isr_{set_name_n}',
@@ -205,9 +209,9 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                                         save_name=[f'sdr_{set_name_n}', f'isr_{set_name_n}',
                                                    f'sir_{set_name_n}', f'sar_{set_name_n}'])
 
-                            data_s_n = data_s_n.transpose(0, 2, 3, 1)
+                            data_s_n = data_s_n.transpose((0, 2, 3, 1))
                             # (n_sams, n_src, fl, 1) -> (n_sams, fl, n_channel, n_src)
-                            data_sp_n = data_sp_n.transpose(0, 2, 3, 1)
+                            data_sp_n = data_sp_n.transpose((0, 2, 3, 1))
                             # (n_sams, n_src, fl, 1) -> (n_sams, fl, n_channel, n_src)
 
                             compute_si_sdr(data_s_n, data_sp_n, True, path_metric_para_i,
@@ -236,9 +240,7 @@ if __name__ == '__main__':
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
-    # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
-    # SUB_SET_WAY = 'order'
 
     PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root

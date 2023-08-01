@@ -14,14 +14,22 @@ import logging
 import os
 
 import keras.losses
-from keras import backend as K
+import tensorflow
+if tensorflow.__version__ >= '2.0':
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+    from tensorflow import keras
+    import tensorflow.compat.v1.keras.backend as K
+else:
+    import tensorflow as tf
+    import keras
+    from keras import backend as K
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.models import load_model
 import h5py
 import numpy as np
 import tables
-import tensorflow as tf
 
 from error import Error, ParameterError
 from file_operation import list_files_end_str, mkdir
@@ -47,9 +55,9 @@ def build_freeze_decoder_model(num_model, path_weight_decoder_files, dict_model_
     n_outputs = kwargs['n_outputs'] if 'n_outputs' in kwargs.keys() else None  # 4
     assert n_outputs == len(path_weight_decoder_files)
 
-    if num_model == 1:
+    if num_model in (1, 15, 21):
         n_no_para_decoder_layer = -0
-    elif num_model in (8, 9):
+    elif num_model in (8, 9, 13):
         n_no_para_decoder_layer = -2
 
     object_build_model = BuildModel(num_model, input_dim, **kwargs)
@@ -79,6 +87,8 @@ def train_freeze_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, mode
         z_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): dict of model output, data predict target.
         path_save (str): where to save autoencoder output predict.
         modelname (str, optional): for autoencoder model name. Defaults to None.
+        dict_model_load (dict, optional): custom objects for load model. Defaults to None.
+        fname_model_load (str, optional): file name of model to load. Defaults to None.
     """
     if fname_model_load is None:
         # give a new moel for the first time training
@@ -181,7 +191,8 @@ def predict_freeze_autoencoder(model, z_test, path_save, save_name, dummy_input,
         model (keras.Model): a keras model, encoder or decoder.
         z_test (np.ndarray(float),shape=(n_sams,1,fl)): model input, data to predict.
         path_save (str): where to save predict outputs.
-        save_name (str]): path and name of the output file.
+        save_name (str): path and name of the output file.
+        dummy_input (np.ndarray): dummy input of the model.
         mode (str, optional): {'batch_process', 'batch_save'}, way to predict and save data.
                              Defaults to 'batch_process'.
         bs_pred (int, optional): batch size when predict model. Defaults to 32.
@@ -198,7 +209,7 @@ def predict_freeze_autoencoder(model, z_test, path_save, save_name, dummy_input,
     def func_predict(data_list):
         """Predict function.
         Args:
-            data (np.ndarray(float)): data to be predict.
+            data_list (list(np.ndarray(float))): data to be predict.
         Returns:
             data_pred (np.ndarray(float)): model predict output of data.
         """
@@ -519,11 +530,11 @@ if __name__ == '__main__':
                 logging.debug(f'x_i.name {key}')
                 logging.debug(f'x_i.shape {x_dict_i[key].shape}')
 
-            search_model(PATH_RESULT, 'model_8_2_1', SRC_NAMES, x_dict_i, z_dict_i, None,
-                         bool_train=True, bool_clean_weight_file=True, bool_predict=True,
-                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-                            'n_conv_encoder': 1, 'n_filters': 64, 'encoder_multiple_out': True,
-                            'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1})
+            # search_model(PATH_RESULT, 'model_8_2_1', SRC_NAMES, x_dict_i, z_dict_i, None,
+            #              bool_train=True, bool_clean_weight_file=True, bool_predict=True,
+            #              **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+            #                 'n_conv_encoder': 1, 'n_filters': 64, 'encoder_multiple_out': True,
+            #                 'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1})
 
             # search_model(PATH_RESULT, 'model_8_4_1', SRC_NAMES, x_dict_i, z_dict_i, None,
             #              bool_train=True, bool_clean_weight_file=True, bool_predict=True,
@@ -531,5 +542,44 @@ if __name__ == '__main__':
             #                 'n_conv_encoder': 1, 'n_filters': 64,
             #                 'use_bias': False,'encoder_multiple_out': True,
             #                 'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1})
+
+            # model_13 multiple decoder RNN TasNet without mask
+            search_model(PATH_RESULT, 'model_13_2_1', SRC_NAMES, x_dict_i, z_dict_i, None,
+                         bool_train=True, bool_clean_weight_file=True, bool_predict=True,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'BLSTM', 'latent_dim': 200,
+                             'n_block_encoder': 1, 'n_block_decoder': 1,
+                             'model_type': 'ae', 'encoder_multiple_out': True,
+                             'is_multiple_decoder': True, 'use_mask': False})
+
+            search_model(PATH_RESULT, 'model_13_3_1', SRC_NAMES, x_dict_i, z_dict_i, None,
+                         bool_train=True, bool_clean_weight_file=True, bool_predict=True,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 50, 'batch_size': 8, 'bs_pred': 8,
+                            'bool_num_padd': True,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'dprnn', 'latent_dim': 200,
+                             'n_block_encoder': 1, 'n_block_decoder': 1,
+                             'model_type': 'ae', 'encoder_multiple_out': True,
+                             'is_multiple_decoder': True, 'use_mask': False})
+
+            # Multiple-Decoder Conv-Tasnet without mask
+            search_model(PATH_RESULT, 'model_15_2_6', SRC_NAMES, x_dict_i, z_dict_i, None,
+                         bool_train=True, bool_clean_weight_file=True, bool_predict=True,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 200, 'batch_size': 6, 'bs_pred': 6,
+                            'n_conv_encoder': 1, 'n_filters_encoder': 64,
+                            'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
+                            'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
+                            'model_type': 'ae', 'encoder_multiple_out': True,
+                            'is_multiple_decoder': True, 'use_mask': False})
+
+            # Multiple-Decoder Wave-U-Net without skip connections
+            search_model(PATH_RESULT, 'model_21_6_10', SRC_NAMES, x_dict_i, z_dict_i, None,
+                         bool_train=False, bool_clean_weight_file=False, bool_predict=True,
+                         **{'i': lr_i, 'j': -4, 'n_outputs': 4, 'epochs': 800, 'batch_size': 16, 'bs_pred': 16,
+                            'n_pad_input': 13, 'num_layers': 4, 'batch_norm': True,
+                            'use_skip': False, 'output_type': 'direct', 'output_activation': 'tanh',
+                            'is_multiple_decoder': True,
+                            'model_type': 'ae', 'encoder_multiple_out': True})
 
     logging.info('finished')

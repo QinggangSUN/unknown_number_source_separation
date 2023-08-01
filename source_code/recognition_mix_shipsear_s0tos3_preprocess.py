@@ -60,13 +60,13 @@ def subset_nums_create(path_source_root, sub_set_way, rates, n_samples, n_source
     rss1 = Subsets(rates, n_samples)
     # nums: 3D list [sourcei][subseti][numi]
     if sub_set_way == 'rand':
-        nums = [rss1.randsubsetsnums(n_samples) for i in range(n_sources)]
+        nums = [rss1.randsubsetsnums(n_samples) for _ in range(n_sources)]
         with open(os.path.join(path_source_root, 'randseq.pickle'), 'wb') as f_wb:
             pickle.dump(rss1.get_randseq(), f_wb)
         with open(os.path.join(path_source_root, 'randseq.json'), 'w', encoding='utf-8') as f_w:
             json.dump({'data': rss1.get_randseq()}, f_w)
     elif sub_set_way == 'order':
-        nums = [rss1.ordersubsetsnums(n_samples) for i in range(n_sources)]
+        nums = [rss1.ordersubsetsnums(n_samples) for _ in range(n_sources)]
 
     # return 2D list [subseti][(sourcei, numi)]
     nums_rand = shuffle_sets(nums)
@@ -90,7 +90,7 @@ def subset_x(source_frames, nums_rand):
         x_sets_i = []
         for pair_i in nums_i:
             x_sets_i.append(source_frames[pair_i[0]][pair_i[1]])
-        x_sets.append(np.asarray(x_sets_i, dtype=np.float32))
+        x_sets.append(x_sets_i)
     return x_sets
 
 
@@ -106,7 +106,7 @@ def y_sets_create(nums_rand, y_labels, n_src):
     for pair_si in nums_rand:
         label_i = [y_labels[pair_i[0]] for pair_i in pair_si]
         y_sets.append(
-            np.asarray(label_i, dtype=np.int32).reshape(-1, 1, n_src-1))
+            np.asarray(label_i, dtype=np.int32).reshape((-1, 1, n_src-1)))
     return y_sets
 
 

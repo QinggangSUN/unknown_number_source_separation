@@ -1,5 +1,13 @@
-import tensorflow as tf
-import keras
+# -*- coding: utf-8 -*-
+
+import tensorflow
+if tensorflow.__version__ >= '2.0':
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+    from tensorflow import keras
+else:
+    import tensorflow as tf
+    import keras
 if keras.__version__ < '2.3.1':
     import keras_layer_normalization
 

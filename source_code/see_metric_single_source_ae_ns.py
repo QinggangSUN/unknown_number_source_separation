@@ -20,6 +20,7 @@ from prepare_data import list_transpose
 from prepare_data_shipsear_recognition_mix_s0tos3 import read_data
 from see_metric_autoencoder import save_metric, compute_metric, display_metric, compute_sdr
 from see_metric_autoencoder import compute_si_sdr, metric_mean_src_to_file, metric_mean_mix_to_file, metric_mean_to_csv
+from see_metric_autoencoder import recover_pad_num_samples, recover_pad_num_samples_list
 
 
 class ListDecodedFiles(object):
@@ -126,6 +127,7 @@ def data_reshape_same(data_1, data_2, mode='transpose'):
     Args:
         data_1 (list[np.ndarray] or np.ndarray): data_1 with target data shape.
         data_2 (list[np.ndarray] or np.ndarray): data_2 to reshape.
+        mode (str, optional): type of reshape method. Defaults to 'transpose'.
     Returns:
         data_1 (list[np.ndarray] or np.ndarray): data_1 with target data shape.
         data_2 (list[np.ndarray] or np.ndarray): data_2 after reshape.
@@ -161,9 +163,6 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, set_names)
         s_data (list[list[h5pyFile]]): file object of datas.
         set_names (list[str]): list of names of sets, e.g. ['train', 'val', 'test'].
     """
-    # path_models = object_decoded_files.path_models
-    # path_model_src_paras = object_decoded_files.path_model_src_paras  # [model][src][para_name]
-    # name_model_paras = object_decoded_files.name_model_src_paras  # [model][src][para_name]
     name_weight_files = object_decoded_files.name_weight_files  # [model][src][para_name][weight_file]
     path_metrics_paras = object_decoded_files.path_metrics_paras  # [model][para_name]
     path_out_models = object_decoded_files.path_out_models  # [model][src][para_name]
@@ -182,6 +181,8 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, set_names)
                 for src_name_set_k in src_name_set_j:
                     path_sp_k = os.path.join(path_out_model_k, f'{src_name_set_k}_{name_weight_file_l}_decoded')
                     data_sp_j.append(read_data(os.path.dirname(path_sp_k), os.path.basename(path_sp_k)))
+
+                data_sp_j = recover_pad_num_samples_list(data_s_j, data_sp_j)
 
                 mse_list, mse_mean = compute_metric(data_s_j, data_sp_j, mse_np)
                 display_metric(mse_list, path_metric_para_j, set_names,
@@ -232,12 +233,14 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, set_names)
                 mkdir(path_metric_para_j)
 
                 for data_s_n, data_sp_n, set_name_n in zip(data_s_j, data_sp_j, set_names):
-                    data_s_n = np.asarray(data_s_n).transpose(1, 0, 3, 2)
+                    data_s_n = np.asarray(data_s_n).transpose((1, 0, 3, 2))
                     # (n_src, n_sams, 1, fl) -> (n_sams, n_src, fl, 1)
                     data_sp_n = np.asarray(data_sp_n)
                     if data_sp_n.ndim == 3:
                         data_sp_n = np.expand_dims(data_sp_n, -2)  # (n_src, n_sams, 1, fl)
-                    data_sp_n = data_sp_n.transpose(1, 0, 3, 2)  # ->(n_sams, n_src, fl, channel=1)
+                    data_sp_n = data_sp_n.transpose((1, 0, 3, 2))  # ->(n_sams, n_src, fl, channel=1)
+
+                    data_sp_n = recover_pad_num_samples(data_s_n, data_sp_n)
 
                     if tuple(data_s_n.shape) != tuple(data_sp_n.shape):
                         data_s_n, data_sp_n = data_reshape_same(data_s_n, data_sp_n)
@@ -247,9 +250,9 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, set_names)
                                 save_name=[f'sdr_{set_name_n}', f'isr_{set_name_n}',
                                            f'sir_{set_name_n}', f'sar_{set_name_n}'])
 
-                    data_s_n = data_s_n.transpose(0, 2, 3, 1)
+                    data_s_n = data_s_n.transpose((0, 2, 3, 1))
                     # (n_sams, n_src, fl, 1) -> (n_sams, fl, n_channel, n_src)
-                    data_sp_n = data_sp_n.transpose(0, 2, 3, 1)
+                    data_sp_n = data_sp_n.transpose((0, 2, 3, 1))
                     # (n_sams, n_src, fl, 1) -> (n_sams, fl, n_channel, n_src)
 
                     compute_si_sdr(data_s_n, data_sp_n, True, path_metric_para_j,
@@ -304,9 +307,7 @@ if __name__ == '__main__':
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
-    # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
-    # SUB_SET_WAY = 'order'
 
     PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root

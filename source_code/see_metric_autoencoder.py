@@ -200,7 +200,6 @@ def metric_mean_src_to_file(path_metric, src_names, metric_keys, path_save):
     for metric_key in metric_keys:
         f_h5 = h5py.File(os.path.join(path_save, f'{metric_key}_mean.hdf5'), 'a')
         dir_names = list_dirs(path_metric, False)
-        # dir_names = [name for name in dir_names if os.path.isdir(os.path.join(path_metric, name))]
         for dir_name in dir_names:
             path_metric_dir = os.path.join(path_metric, dir_name)
             grp_dir = f_h5.create_group(dir_name)
@@ -223,7 +222,6 @@ def metric_mean_mix_to_file(path_metric, src_names, sub_sets, metric_keys, path_
     for metric_key in metric_keys:
         f_h5 = h5py.File(os.path.join(path_save, f'{metric_key}_mean.hdf5'), 'a')
         dir_names = list_dirs(path_metric, False)
-        # dir_names = [name for name in dir_names if os.path.isdir(os.path.join(path_metric, name))]
         for dir_name in dir_names:
             grp_dir = f_h5.create_group(dir_name)
             path_metric_dir = os.path.join(path_metric, dir_name)
@@ -267,6 +265,37 @@ def metric_mean_to_csv(file_name, level=1):
             data_arr = np.vstack(data_list)
         file_name, _ = os.path.splitext(file_name)
         np.savetxt(f'{file_name}.csv', data_arr, delimiter=",")
+
+
+def recover_pad_num_samples(data_s, data_sp):
+    """Recover predict outputs of networks to real numbers of samples.
+    Args:
+        data_s (np.ndarray): dataset of target samples.
+        data_sp (np.ndarray): dataset of output of networks.
+    Returns:
+        data_sp_recovered (np.ndarray): recovered dataset of output of networks.
+    """
+    if data_s.shape[0] != data_sp.shape[0]:
+        data_sp_recovered = data_sp[:data_s.shape[0]]
+        logging.info('Please make sure predict outputs have been padded.')
+    else:
+        data_sp_recovered = data_sp
+    return data_sp_recovered
+
+
+def recover_pad_num_samples_list(data_s_list, data_sp_list):
+    """Recover predict outputs of networks to real numbers of samples.
+    Args:
+        data_s_list (list[np.ndarray]): datasets of target samples.
+        data_sp_list (list[np.ndarray]): datasets of outputs of networks.
+    Returns:
+        data_sp_list_recovered (list[np.ndarray]): recovered datasets of outputs of networks.
+    """
+    data_sp_list_recovered = []
+    for data_s_i, data_sp_i in zip(data_s_list, data_sp_list):
+        data_sp_recovered_i = recover_pad_num_samples(data_s_i, data_sp_i)
+        data_sp_list_recovered.append(data_sp_recovered_i)
+    return data_sp_list_recovered
 
 
 if __name__ == '__main__':
