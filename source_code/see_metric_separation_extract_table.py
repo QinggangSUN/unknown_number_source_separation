@@ -28,7 +28,7 @@ from train_separation_multiple_autoencoder import index_mix_src_ns
 def query_targets_of_input(n_src, name_input, str_end='zero'):
     """Query targets of the input.
     Args:
-        n_src (int): number of the target, including one backgroud noise.
+        n_src (int): number of the target, including one background noise.
         name_input (str): name of the input source.
         str_end (str, optional): for file name. Defaults to 'zero'.
     Returns:
@@ -194,7 +194,7 @@ def create_table_1_names(names_sources, n_src):
         Evaluate the similarity between the separation predict and real targets.
     Args:
         names_sources (list[str]): names of the mixtures, including single target and multiple targets.
-        n_src (int): number of the target, including one backgroud noise.
+        n_src (int): number of the target, including one background noise.
     Returns:
         names_inputs (list[str]): names of the input mixture signals.
         names_channels (list[str]): names of the channels for the specific targets.
@@ -229,7 +229,7 @@ def create_table_2_names(names_sources, n_src, metric_key):
         Evaluate how bad the channel predict between the silence signal.
     Args:
         names_sources (list[str]): names of the mixtures, including single target and multiple targets.
-        n_src (int): number of the target, including one backgroud noise.
+        n_src (int): number of the target, including one background noise.
         metric_key (str): name of the metric.
     Returns:
         names_inputs (list[str]): names of the input mixture signals.
@@ -300,11 +300,11 @@ def table_names_to_result_names(name_source, n_src, name_srcs=['A', 'B', 'C', 'D
     """Convert name of the source in tables to name in saved results.
     Args:
         name_source (str): name of the source to convert.
-        n_src (int): number of the target, including one backgroud noise.
+        n_src (int): number of the target, including one background noise.
         name_srcs (list[str], optional): names of the single sources. Defaults to ['A', 'B', 'C', 'D'].
         str_end (str, optional): end sting of names of the files. Defaults to 'zero'.
     Returns:
-        name_reult_source (str): name of the source in saved results.
+        name_result_source (str): name of the source in saved results.
     Examples:
         >>> print(table_names_to_result_names('A', 4))
         Z_0
@@ -313,10 +313,10 @@ def table_names_to_result_names(name_source, n_src, name_srcs=['A', 'B', 'C', 'D
     """
     names_sources = create_source_names(name_srcs)
     n_sources = n_src+len(index_mix_src_ns(n_src))
-    names_reult_sources = [f'Z_{i}_{str_end}' for i in range(n_sources)]
+    names_result_sources = [f'Z_{i}_{str_end}' for i in range(n_sources)]
     index_source = names_sources.index(name_source)
-    name_reult_source = names_reult_sources[index_source]
-    return name_reult_source
+    name_result_source = names_result_sources[index_source]
+    return name_result_source
 
 
 if __name__ == '__main__':
@@ -326,7 +326,7 @@ if __name__ == '__main__':
 
     n_src = 4
     names_sources = create_source_names()
-    names_reult_sources = [f'Z_{i}_zero' for i in range(len(names_sources))]
+    names_result_sources = [f'Z_{i}_zero' for i in range(len(names_sources))]
 
     def create_table_algorithm_1_3(path_result):
         names_inputs_1, names_channels_1, names_targets_1 = create_table_1_names(names_sources, n_src)
@@ -458,7 +458,7 @@ if __name__ == '__main__':
                             name_para=name_para)
 
     names_sources_mix = names_sources[n_src:]
-    names_reult_sources_mix = names_reult_sources[n_src:]
+    names_result_sources_mix = names_result_sources[n_src:]
 
     # Known number
     # path_result_root = '../result_separation_multiple_autoencoder/'

@@ -142,7 +142,7 @@ def samerate_loss2(y_true, y_pred):
 
 
 def samerate_acc2(y_true, y_pred):
-    """Samerate (cosine similarity) keras accuracy fuction using Tensorflow."""
+    """Samerate (cosine similarity) keras accuracy function using Tensorflow."""
     y_true, y_pred = tf.transpose(
         y_true, [0, 3, 2, 1]), tf.transpose(y_pred, [0, 3, 2, 1])
 

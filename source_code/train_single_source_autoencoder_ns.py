@@ -69,69 +69,6 @@ def data_save_reshape_ae(data):
     return data_save_reshape(data)
 
 
-def subset_seq(seq, n_sams):
-    """Split index seqs to different sets.
-    Args:
-        seq (list[int]): index of the source.
-        n_sams (list[int]): numbers of the sets.
-    Returns:
-        nums list[list[int]]: index of different sets.
-    """
-    nums = []
-    i = 0
-    for n_sam in n_sams:
-        nums.append(seq[i:i+n_sam])
-        i += n_sam
-
-    return nums
-
-
-def z_sets_ns_create(s_list, nums, scaler_data, path_save):
-    """Create train, val, test data set through nums.
-    Inputs:
-        s_list (list[np.ndarray, shape==(n_sams, 1, frame_length)]): [n_src] samples of sources.
-        scaler_data (str): way of scaler data.
-        nums (list[int]): [n_sams], index of the samples per set of sources.
-        path_save (str): path where to save z data sets.
-    Returns:
-        data_sources(list[list[np.ndarray, shape==(n_sams, 1, frame_length)]]): [n_src][set], data sets of sources.
-    """
-    def z_set_ns_create(source_arr, nums, set_names=None, save_name=None):
-        """Create train, val, test data set through index nums.
-        Inputs:
-            source_arr (np.ndarray, shape==(n_sams, 1, frame_length)): samples of a source.
-            nums (list[list[int]]): [n_sets][n_sams], index of the samples per set.
-            set_names (list[str], optional): names of the sets of data. Default None.
-            save_name (str): path+file_name to save data to files.
-        Returns:
-            source_sets(list[np.ndarray, shape==(n_sams, 1, frame_length)]): [set], data sets.
-        """
-        if set_names is None:
-            set_names = ['train', 'val', 'test']
-
-        source_sets = []
-        for nums_set_i in nums:
-            source_set_i = [source_arr[nums_i_j] for nums_i_j in nums_set_i]
-            source_set_i = np.asarray(source_set_i)
-            source_sets.append(source_set_i)
-
-        if save_name is not None:
-            path_save, file_name = os.path.split(save_name)
-            for name_i, data_i in zip(set_names, source_sets):
-                save_datas({f'{file_name}_{name_i}': data_i}, path_save)
-        return source_sets  # [set](n_sams, 1, frame_length)
-
-    if scaler_data == 'max_one':
-        s_list = sourceframes_mo_create(s_list)
-
-    data_sources = []
-    for i, s_ci in enumerate(s_list):
-        data_sources.append(
-            z_set_ns_create(s_ci, nums, save_name=os.path.join(path_save, f'Z_{i}_ns')))
-
-    return data_sources  # [n_src][set](n_sams, 1, frame_length)
-
-
 def predict_autoencoder(model, z_test, path_save, save_name, mode='batch_process', bs_pred=32, compile_model=False,
                         reshape_save=False):
     """Predict encoder and decoder.
@@ -144,7 +81,7 @@ def predict_autoencoder(model, z_test, path_save, save_name, mode='batch_process
                              Defaults to 'batch_process'.
         bs_pred (int, optional): batch size when predict model. Defaults to 32.
         compile_model (bool, optional): wether compile model before predict,
-                                        use when load a unconpiled model. Defaults to False.
+                                        use when load an unconpiled model. Defaults to False.
         reshape_save (bool, optional): wether reshape data when save data. Defaults to False.
     """
     if compile_model:
@@ -688,6 +625,7 @@ def clear_model_weight_file(path_model_dir, pos_epoch=-2):
     """Clear model files with weights, saved the last model.
     Args:
         path_model_dir (str): Root path, where save weight files of a model.
+        pos_epoch (int, optional): Where the keyword placed in string between '_'. Defaults to -2.
     """
     path_model_weights = walk_files_end_str(path_model_dir, '.hdf5')
     logging.debug(f'path_model_weights {path_model_weights}')
@@ -715,7 +653,7 @@ def clear_model_weight_files(path, model_dirname='auto_model', pos_epoch=-2):
     """Clear model files with weights, saved the last model.
     Args:
         path (str): Root path, where save models.
-        model_dirname (str, optional): sub dir name of directories. Defaults to 'auto_model'.
+        model_dirname (str, optional): sub dir name of directories. Defaults to 'auto_model'.        	 pos_epoch (int, optional): Where the keyword placed in string between '_'. Defaults to -2.
     """
     path_models = list_dirs_start_str(path, 'model_')
     for path_model in path_models:
@@ -829,7 +767,7 @@ class BuildModel(object):
         self.n_filters_conv = kwargs['n_filters_conv'] if 'n_filters_conv' in kwargs.keys() else 2
 
     def build_model(self, **kwargs):
-        """Build a autoencoder model.
+        """Build an autoencoder model.
         Returns:
             autoencoder (keras.Model): the autoencoder model.
             decoder (keras.Model): the decoder model.
@@ -1022,6 +960,7 @@ class BuildModel(object):
             use_sum_repeats = kwargs['use_sum_repeats'] if 'use_sum_repeats' in kwargs.keys() else False
             use_mask = kwargs['use_mask'] if 'use_mask' in kwargs.keys() else True
             act_mask = kwargs['act_mask'] if 'act_mask' in kwargs.keys() else 'sigmoid'
+            output_activation = kwargs['output_activation'] if 'output_activation' in kwargs.keys() else None
             model_type = kwargs['model_type'] if 'model_type' in kwargs.keys() else 'separator'
             encoder_multiple_out = kwargs['encoder_multiple_out'] if 'encoder_multiple_out' in kwargs.keys() else False
             autoencoder, decoder, n_encoder_layer, n_decoder_layer = build_model_14(
@@ -1031,7 +970,8 @@ class BuildModel(object):
                 n_block_encoder, n_block_decoder, n_layer_each_block, kernel_size, causal, norm_type,
                 n_outputs, is_multiple_decoder,
                 use_residual=use_residual, use_skip=use_skip, use_sum_repeats=use_sum_repeats,
-                use_mask=use_mask, act_mask=act_mask, model_type=model_type, encoder_multiple_out=encoder_multiple_out,
+                use_mask=use_mask, act_mask=act_mask, output_activation=output_activation,
+                model_type=model_type, encoder_multiple_out=encoder_multiple_out,
             )
         elif num_model in (20, 21):
             input_dim = self.input_dim
@@ -1087,9 +1027,8 @@ class BuildModel(object):
                      'loss_func': loss_func, 'metrics_func': user_metrics_func, 'metrics_name': user_metrics_name}
 
         if num_model in (10, 11, 12, 13):
-            if 'rnn_type' in kwargs.keys() and kwargs['rnn_type'] == 'dprnn':
+            if 'block_type' in kwargs.keys() and kwargs['block_type'] == 'dprnn':
                 dict_dprnn = {'DprnnBlock': DprnnBlock}
-                paras.update(**dict_dprnn)
         if num_model in (14, 15, 16, 17, 18, 19):
             dict_tcn = {'DepthwiseConv1D': DepthwiseConv1D,
                         'GlobalNormalization': GlobalNormalization,
@@ -1408,8 +1347,9 @@ if __name__ == '__main__':
 
             # Multiple-Decoder Wave-U-Net without skip connections
             search_model(PATH_RESULT, 'model_21_6_10', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-                         **{'i': lr_i, 'j': lr_j, 'epochs': 800, 'batch_size': 16, 'bs_pred': 16,
-                            'n_pad_input': 13, 'num_layers': 4, 'batch_norm': True,
+                         **{'i': lr_i, 'j': -4, 'epochs': 1600, 'batch_size': 16, 'bs_pred': 16,
+                            'n_pad_input': 13, 'num_layers': 4,
+                            # 'batch_norm': True,
                             'use_skip': False, 'output_type': 'direct', 'output_activation': 'tanh',
                             'model_type': 'ae', 'is_multiple_decoder': True, 'n_outputs': 1,
                             'bool_train': True, 'bool_test_ae': True,

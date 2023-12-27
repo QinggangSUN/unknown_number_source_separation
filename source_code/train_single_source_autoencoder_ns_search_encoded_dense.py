@@ -588,7 +588,8 @@ def build_model_14_search(encoded_shape, path_weight_decoder_files, dict_model_l
         decoded_src_i = PReLU(shared_axes=[1])(decoded_src_i)
         decoded_src_i = Conv1D(filters=n_filters_encoder, kernel_size=1)(decoded_src_i)
         decoded_src_i = Reshape((frame_length, 1, n_filters_encoder))(decoded_src_i)
-        decoded_src_i = normal_layer(decoded_src_i, norm_type)
+        if norm_type:
+            decoded_src_i = normal_layer(decoded_src_i, norm_type)
         decoded_src_i = Reshape((frame_length, n_filters_encoder))(decoded_src_i)
         # (bs, fl=10547, n_filters_encoder=64)
         logging.debug(f'decoded_src_i reshape {decoded_src_i}')
@@ -1233,19 +1234,19 @@ if __name__ == '__main__':
             # search_best_model(PATH_RESULT, SRC_NAMES,
             #              'model_8_1_1', (329, 200), input_dim, x_dict_j,
             #              **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 100, 'batch_size': 1, 'bs_pred': 1,
-            #                 'rnn_type': 'LSTM', 'units_r': 256, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
+            #                 'rnn_type': 'LSTM', 'units_r': 200, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
             #                 'bool_train': True, 'bool_predict_weight_file': True})
 
             search_best_model(PATH_RESULT, SRC_NAMES,
                          'model_8_2_1', (329, 200), input_dim, x_dict_j,
                          **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 100, 'batch_size': 1, 'bs_pred': 1,
-                            'rnn_type': 'BLSTM', 'units_r': 256, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
+                            'rnn_type': 'BLSTM', 'units_r': 200, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
                             'bool_train': True, 'bool_predict_weight_file': True})
 
             # search_best_model(PATH_RESULT, SRC_NAMES,
             #              'model_8_4_1', (329, 200), input_dim, x_dict_j,
             #              **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 100, 'batch_size': 1, 'bs_pred': 1,
-            #                 'rnn_type': 'BLSTM', 'units_r': 256, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
+            #                 'rnn_type': 'BLSTM', 'units_r': 200, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
             #                 'use_bias': False,
             #                 'bool_train': True, 'bool_predict_weight_file': True})
 
@@ -1262,7 +1263,7 @@ if __name__ == '__main__':
                               'model_15_2_6', (10547, 64), input_dim, x_dict_j,
                               **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 200, 'batch_size': 1, 'bs_pred': 1,
                                  'n_conv_encoder': 1, 'n_filters_encoder': 64,
-                                 # 'output_activation': 'tanh',
+                                 'output_activation': 'tanh', 'norm_type': None,
                                  'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
                                  'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
                                  'bool_train': True, 'bool_predict_weight_file': True})
@@ -1270,7 +1271,7 @@ if __name__ == '__main__':
             # Multiple-Decoder Wave-U-Net without skip connections
             search_best_model(PATH_RESULT, SRC_NAMES,
                               'model_21_6_10', (660, 120), input_dim, x_dict_j,
-                              **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 200, 'batch_size': 1, 'bs_pred': 1,
-                                 'n_pad_input': 13, 'batch_norm': True,
+                              **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 800, 'batch_size': 1, 'bs_pred': 1,
+                                 'n_pad_input': 13, 'num_layers': 4, 
                                  'bool_train': True, 'bool_predict_weight_file': True})
     logging.info('finished')

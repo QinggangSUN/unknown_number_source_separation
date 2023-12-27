@@ -34,7 +34,7 @@ Please cite this work in your publications as :
 		train_separation_one_autoencoder.py
 	(3) Algorithm 2.
 		train_single_source_autoencoder_ns.py
-		train_single_source_autoencoder_ns_search_encoded.py
+		train_single_source_autoencoder_ns_search_encoded_dense.py
 	(4) Algorithm 3.
 		train_single_source_autoencoder_ns.py
 		train_separation_one_autoencoder_freeze_decoder.py

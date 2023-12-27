@@ -1,0 +1,19 @@
+v1.0 init
+v1.1 Fix some fatal problems and add more networks
+       Fix bugs:
+           DPRNN models cannot save weights caused by a Lambda layer.
+           A Lambda layer that slices specific channel of data does not run correctly.
+           A sample of s3 is mislabeled in file "data_dir_tree.md". Fortunately, this mistake did not affect the results of previous experiments.
+           A default path of data in file "data_dir_tree.md" is wrong.
+           A bug about input of decoder in model 8.
+           Some models are not compatible with specific batch size.
+       New features:
+           Add "environment.yml" for linux os.
+v1.2 Fix some problems and add some new features
+       Fix bugs:
+           Remove normalization layers in Algorithm 2 (search encoded vectors).
+           Add 'tanh' activation function on output layer of TCN.
+       New features:
+           Add TensorFlow 2.x support.
+           Add more violin plots of metrics.
+           Add more results of experiments.

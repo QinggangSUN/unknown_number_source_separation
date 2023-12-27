@@ -375,7 +375,7 @@ if __name__ == '__main__':
             search_model(path_result_i, 'model_21_6_10', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
                             'epochs': 800, 'batch_size': 16, 'bs_pred': 16,
-                            'n_pad_input': 13, 'num_layers': 4, 'batch_norm': True,
+                            'n_pad_input': 13, 'num_layers': 4,
                             'use_skip': False, 'output_type': 'direct', 'output_activation': 'tanh',
                             'is_multiple_decoder': True,
                             'bool_train': True, 'bool_test_ae': False,

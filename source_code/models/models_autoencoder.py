@@ -1072,7 +1072,7 @@ def build_model_14(input_dim, n_pad_input,
     # True/False,        False,    False,      True/False,                True, -> False   no network (add inputs)
     # True/False,        False,    False,      True/False,               False, -> False   no network (add inputs)
     """Tasnet or Encoder-Decoder Networks with TCN (conv-TasNet).
-        LUO Y, MESGARANI N. Conv-tasnet: Surpassing ideal time¨Cfrequency magnitude masking for speech separation[J].
+        LUO Y, MESGARANI N. Conv-tasnet: Surpassing ideal time-frequency magnitude masking for speech separation[J].
         IEEE/ACM transactions on audio, speech, and language processing, 2019, 27(8): 1256-1266.
     Args:
         input_dim (int): dim of the input vector.
@@ -1153,7 +1153,8 @@ def build_model_14(input_dim, n_pad_input,
                 # (bs, fl, n_filters_encoder*n_outputs)
                 x = Conv1D(filters=n_filters_encoder*n_outputs, kernel_size=1)(x)
                 x = Reshape((frame_length, n_outputs, n_filters_encoder))(x)  # (bs, fl, n_outputs, n_filters_encoder)
-                x = normal_layer(x, norm_type)
+                if norm_type:
+                    x = normal_layer(x, norm_type)
                 logging.debug(f'after norm {x}')
                 x = Permute((1, 3, 2))(x)  # (bs, fl, n_filters_encoder, n_outputs)
                 logging.debug(f'x Permute {x}')  # (bs, fl=10560, n_filters_encoder=64, n_outputs=4)
@@ -1188,7 +1189,8 @@ def build_model_14(input_dim, n_pad_input,
                 decoded_src_i = PReLU(shared_axes=[1])(decoded_src_i)
                 decoded_src_i = Conv1D(filters=n_filters_encoder, kernel_size=1)(decoded_src_i)
                 decoded_src_i = Reshape((frame_length, 1, n_filters_encoder))(decoded_src_i)
-                decoded_src_i = normal_layer(decoded_src_i, norm_type)
+                if norm_type:
+                    decoded_src_i = normal_layer(decoded_src_i, norm_type)
                 decoded_src_i = Reshape((frame_length, n_filters_encoder))(decoded_src_i)
                 # (bs, fl=10547, n_filters_encoder=64)
                 logging.debug(f'decoded_src_i reshape {decoded_src_i}')

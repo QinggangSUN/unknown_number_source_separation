@@ -180,7 +180,7 @@ def compute_mse(s_list, sp_list, path_metric, file_name, set_name, hist_bins, sa
         set_name (list[str]): name of the sources, e.g. ['s_1', 's_2', 's_3'].
         hist_bins (tuple(float, float, int)): paras for hist.
         save_name (str): name of file to save.
-        save_metric (bool, optional): wether save metric to file. Defaults to True.
+        save_metric (bool, optional): whether save metric to file. Defaults to True.
     Returns:
         mse_list (list[np.ndarray]): [metric](n_src, n_sams), list of mse.
         mse_mean (list[np.ndarray]): [metric], list of mean mse.
@@ -189,7 +189,7 @@ def compute_mse(s_list, sp_list, path_metric, file_name, set_name, hist_bins, sa
     mse_list = obj_dm.compute_metric(mse_np, mode=2)
     mse_mean = obj_dm.compute_mean_metrics(mse_list)
     obj_dm.display_static_metrics(mse_list, set_name, ['violin', 'hist'],
-                              hist_bins=hist_bins, save_name=save_name)
+                                  hist_bins=hist_bins, save_name=save_name)
     if save_metric:
         save_datas({'mse_mean': np.asarray(mse_mean), 'mse': np.asarray(mse_list)},
                    path_metric, file_name=file_name, **{'mode_batch': 'one_file_no_chunk'})
@@ -206,7 +206,7 @@ def compute_sr(s_list, sp_list, path_metric, file_name, set_name, hist_bins, sav
         set_name (list[str]): name of the sources, e.g. ['s_1', 's_2', 's_3'].
         hist_bins (tuple(float, float, int), optional): paras for hist. Defaults to None.
         save_name (str): name of file to save.
-        save_metric (bool, optional): wether save metric to file. Defaults to True.
+        save_metric (bool, optional): whether save metric to file. Defaults to True.
     Returns:
         sr_list (list[np.ndarray]): [metric](n_src, n_sams), list of sr.
         sr_mean (list[np.ndarray]): [metric], list of mean sr.
@@ -215,7 +215,7 @@ def compute_sr(s_list, sp_list, path_metric, file_name, set_name, hist_bins, sav
     sr_list = obj_dm.compute_metric(samerate_acc_np, mode=2)
     sr_mean = obj_dm.compute_mean_metrics(sr_list)
     obj_dm.display_static_metrics(sr_list, set_name, ['violin', 'hist'],
-                              hist_bins=hist_bins, save_name=save_name)
+                                  hist_bins=hist_bins, save_name=save_name)
     if save_metric:
         save_datas({'sr_mean': np.asarray(sr_mean), 'sr': np.asarray(sr_list)},
                    path_metric, file_name=file_name, **{'mode_batch': 'one_file_no_chunk'})
@@ -233,13 +233,13 @@ def save_metric_static(metric_arr, path_metric, metric_name, file_name, set_name
         set_name (list[str]): name of the sources, e.g. ['s_1', 's_2', 's_3'].
         hist_bins (tuple(float, float, int)): paras for hist.
         save_name (str): for name to save.
-        is_save_metric (bool, optional): wether save to file. Defaults to True.
+        is_save_metric (bool, optional): whether save to file. Defaults to True.
     Returns:
         metric_mean (list[float]): list of the mean of the metrics.
     """
     obj_dm = DisplayMetric(None, None, path_metric)
     obj_dm.display_static_metrics(metric_arr, set_name, ['violin', 'hist'],
-                              hist_bins=hist_bins, save_name=save_name)
+                                  hist_bins=hist_bins, save_name=save_name)
     metric_mean = obj_dm.compute_mean_metrics(metric_arr)
     if is_save_metric:
         save_datas({f'{metric_name}_mean': np.asarray(metric_mean), metric_name: metric_arr},
@@ -257,7 +257,7 @@ def compute_sdr(s_list, sp_list, path_metric, file_name, set_name, hist_bins, sa
         set_name (list[str]): name of the sources, e.g. ['s_1', 's_2', 's_3'].
         hist_bins (tuple(float, float, int), optional): paras for hist. Defaults to None.
         save_name (str): name of file to save.
-        is_save_metric (bool, optional): wether save metric to file. Defaults to True.
+        is_save_metric (bool, optional): whether save metric to file. Defaults to True.
     Returns:
         metric_list (list[np.ndarray]): [metric](n_src, n_sams), list of metrics.
         metric_mean_list (list[np.ndarray]): [metric], list of mean of metrics.
@@ -302,7 +302,7 @@ def compute_si_sdr(s_list, sp_list, scaling, path_metric, file_name, set_name, h
         set_name (list[str]): name of the sources, e.g. ['s_1', 's_2', 's_3'].
         hist_bins (tuple(float, float, int)): paras for hist.
         save_name (str): name of file to save.
-        is_save_metric (bool, optional): wether save metric to file. Defaults to True.
+        is_save_metric (bool, optional): whether save metric to file. Defaults to True.
     Returns:
         metric_list (list[np.ndarray]): [metric](n_src, n_sams), list of metrics.
         metric_mean_list (list[np.ndarray]): [metric], list of mean of metrics.

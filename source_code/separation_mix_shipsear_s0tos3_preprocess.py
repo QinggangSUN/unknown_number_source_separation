@@ -300,6 +300,7 @@ if __name__ == '__main__':
     # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
     # SUB_SET_WAY = 'order'
+    TRUE_ORDER = False
 
     # for feature original sample points
     PATH_CLASS = PathSourceRootSep(
@@ -309,16 +310,17 @@ if __name__ == '__main__':
 
     z_data_create(PATH_CLASS, output_zero='zero')
 
+    # For generate Z_0 to Z_7 data set
     PATH_DATA_S = PATH_CLASS.path_source_root
     S_NAMES = json.load(open(os.path.join(PATH_DATA_S, 'dirname.json'), 'r'))['dirname']
     S_LIST = read_datas(os.path.join(PATH_DATA_S, 's_hdf5'), S_NAMES)
 
-    N_SAMS = S_LIST[0].shape[0]
-    if SUB_SET_WAY == 'rand':
+    if TRUE_ORDER:
+        N_SAMS = S_LIST[0].shape[0]
+        nums_seq = list(range(N_SAMS))
+    else:
         with open(os.path.join(PATH_DATA_S, 'randseq.pickle'), 'rb') as f_rb:
             nums_seq = pickle.load(f_rb)
-    elif SUB_SET_WAY == 'order':
-        nums_seq = list(range(N_SAMS))
 
     nums = subset_seq(nums_seq, [3055, 1018, 1020])
 

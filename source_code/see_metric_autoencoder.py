@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Sun Jul 12 21:43:44 2020
 
@@ -86,7 +86,7 @@ def display_metric(metric_list, path_save, set_name, hist_bins=None, save_name=N
         hist_bins = (value_min, value_max, 10)
     dm_object = DisplayMetric(None, None, path_save)
     dm_object.display_static_metrics(metric_list, set_name, ['violin', 'hist'],
-                              hist_bins=hist_bins, save_name=save_name)
+                                     hist_bins=hist_bins, save_name=save_name)
 
 
 def compute_sdr(s_list, sp_list, path_metric, file_name, set_name, hist_bins=None, save_name=None):
@@ -104,7 +104,7 @@ def compute_sdr(s_list, sp_list, path_metric, file_name, set_name, hist_bins=Non
         metric_mean (list[np.ndarray]): [metric], list of mean metric.
     """
     if hist_bins is None:
-        hist_bins = [None for i in range(len(file_name))]
+        hist_bins = [None for _ in range(len(file_name))]
 
     s_arr = np.asarray(s_list)  # (n_sams, n_src, fl, 1) (nsrc, nsampl, nchan)
     sp_arr = np.asarray(sp_list)
@@ -153,7 +153,7 @@ def compute_si_sdr(s_list, sp_list, scaling, path_metric, file_name, set_name, h
     from metrics.si_sdr import ScaleInvariantSDR  # pylint: disable=import-outside-toplevel
 
     if hist_bins is None:
-        hist_bins = [None for i in range(len(file_name))]
+        hist_bins = [None for _ in range(len(file_name))]
 
     s_arr = np.asarray(s_list)  # (n_sams, fl, n_channel=1, n_src)
     sp_arr = np.asarray(sp_list)
@@ -384,7 +384,7 @@ if __name__ == '__main__':
 
                 z_list_i = []  # [set][src]
                 for j_set in range(len(SET_NAMES)):
-                    z_list_ij = [DATA_LIST[k+1][j_set] for k in sm_i]
+                    z_list_ij = [DATA_LIST[k + 1][j_set] for k in sm_i]
                     z_list_i.append(z_list_ij)
 
                 zp_list_i = []

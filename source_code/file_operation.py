@@ -60,9 +60,9 @@ def list_files_end_str(path, str_end, full=True):
     return list_files_filter(path, full, lambda file_name: file_name.endswith(str_end))
 
 
-def list_files_start_str(path, str_end, full=True):
-    """Return list[str] names of the files, end with str_end, in the path."""
-    return list_files_filter(path, full, lambda file_name: file_name.startwith(str_end))
+def list_files_start_str(path, str_start, full=True):
+    """Return list[str] names of the files, start with str_start, in the path."""
+    return list_files_filter(path, full, lambda file_name: file_name.startswith(str_start))
 
 
 def list_dirs(path, full=True):
@@ -181,7 +181,7 @@ def walk_files_end_str(path, str_end, full=True):
 
 def mkdir(path):
     """Create a directory if it does not exist.
-        If father path not exist, it will be created automaticlly.
+        If father path not exist, it will be created automatically.
     Returns:
         True : created succeed,
         False : already exists.
@@ -190,7 +190,7 @@ def mkdir(path):
     path = path.rstrip("\\")  # Remove the end \ symbol
     isExists = os.path.exists(path)  # Determine if the path exists
     if not isExists:  # Create a directory if it does not exist
-        # if father path not exist, it will be created automaticlly
+        # if father path not exist, it will be created automatically
         os.makedirs(path)
         logging.debug(f'{path} created succeed')
         return True

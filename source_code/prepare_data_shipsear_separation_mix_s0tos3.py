@@ -88,7 +88,7 @@ def create_snrs(distributed='uniform', low=None, high=None, num=1, n_src=1):
 
 def data_mixwav_create(path_class, snrs=None, test_few=False):  # pylint: disable=too-many-locals
     """Create and save mixed sources original sampling point wavmat,
-        you may run this function only onece.
+        you may run this function only one time.
     Args:
         path_class (object class PathSourceRootSep): object of class to compute path.
         snrs (np.ndarray, optional): randomly generated SNR. Defaults to None.

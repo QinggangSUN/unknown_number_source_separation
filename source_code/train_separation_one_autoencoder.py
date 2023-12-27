@@ -180,7 +180,7 @@ if __name__ == '__main__':
             search_model(PATH_RESULT, 'model_21_6_10', input_dim, x_dict_i, z_dict_i, None,
                          **{'i': lr_i, 'j': -4, 'n_outputs': 4,
                             'epochs': 800, 'batch_size': 16, 'bs_pred': 16,
-                            'n_pad_input': 13, 'num_layers': 4, 'batch_norm': True,
+                            'n_pad_input': 13, 'num_layers': 4,
                             'use_skip': False, 'output_type': 'direct', 'output_activation': 'tanh',
                             'is_multiple_decoder': True,
                             'bool_train': True, 'bool_test_ae': False,

@@ -39,8 +39,8 @@ from see_metric_single_source_ae_ns import ListDecodedFiles
 from train_functions import output_history, save_model_struct
 from train_single_source_autoencoder_ns import BuildModel, build_dict_model_load, clear_model_weight_file
 from train_single_source_autoencoder_ns import data_save_reshape_ae, test_autoencoder, train_autoencoder
-from train_single_source_autoencoder_ns_search_encoded import compute_num_model, create_decoder_weight_model
-from train_single_source_autoencoder_ns_search_encoded import transpose_names_to_para_src
+from train_single_source_autoencoder_ns_search_encoded_dense import compute_num_model, create_decoder_weight_model
+from train_single_source_autoencoder_ns_search_encoded_dense import transpose_names_to_para_src
 
 
 def build_freeze_decoder_model(num_model, path_weight_decoder_files, dict_model_load=None, **kwargs):
@@ -384,7 +384,7 @@ def train_predict_ae(autoencoder, paras, x_dict, z_dict, path_save, dict_model_l
 def search_model(path_result_root, model_name, src_names, x_dict, z_dict, paras,
                  dict_model_load=None, bool_train=True, bool_clean_weight_file=True, bool_predict=True,
                  **kwargs):
-    """For seach best model.
+    """For search best model.
     Args:
         path_result_root (os.Path): root directory where to save result.
         model_name (str): name of the model.
@@ -575,9 +575,9 @@ if __name__ == '__main__':
 
             # Multiple-Decoder Wave-U-Net without skip connections
             search_model(PATH_RESULT, 'model_21_6_10', SRC_NAMES, x_dict_i, z_dict_i, None,
-                         bool_train=False, bool_clean_weight_file=False, bool_predict=True,
+                         bool_train=True, bool_clean_weight_file=True, bool_predict=True,
                          **{'i': lr_i, 'j': -4, 'n_outputs': 4, 'epochs': 800, 'batch_size': 16, 'bs_pred': 16,
-                            'n_pad_input': 13, 'num_layers': 4, 'batch_norm': True,
+                            'n_pad_input': 13, 'num_layers': 4,
                             'use_skip': False, 'output_type': 'direct', 'output_activation': 'tanh',
                             'is_multiple_decoder': True,
                             'model_type': 'ae', 'encoder_multiple_out': True})

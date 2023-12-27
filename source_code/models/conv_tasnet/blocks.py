@@ -82,7 +82,8 @@ def tcn_block(inputs, filters, residual_channels, skip_channels, kernel_size, di
     x = inputs
     x = Conv1D(filters, 1)(x)
     x = PReLU(shared_axes=[1])(x)
-    x = normal_layer(x, norm_type)
+    if norm_type:
+        x = normal_layer(x, norm_type)
     padding_size = dilation * (kernel_size - 1)
     if causal:
         x = ZeroPadding1D((padding_size, 0))(x)
@@ -90,7 +91,8 @@ def tcn_block(inputs, filters, residual_channels, skip_channels, kernel_size, di
         x = ZeroPadding1D((padding_size // 2, padding_size // 2))(x)
     x = DepthwiseConv1D(kernel_size, dilation_rate=dilation)(x)  # (bs, fl, filters*(depth_multiplier=1))
     x = PReLU(shared_axes=[1])(x)
-    x = normal_layer(x, norm_type)
+    if norm_type:
+        x = normal_layer(x, norm_type)
     if use_residual:
         residual = Conv1D(residual_channels, 1)(x)
     else:
@@ -116,7 +118,8 @@ class TemporalConvBlock(keras.layers.Layer):
         x = inputs  # (bs, fl, feature)
         x = Conv1D(self.filters, 1)(x)  # (bs, fl, filters)
         x = PReLU(shared_axes=[1])(x)
-        x = normal_layer(x, self.norm_type)
+        if self.norm_type:
+            x = normal_layer(x, self.norm_type)
         padding_size = self.dilation * (self.kernel_size - 1)
         if self.causal:
             x = ZeroPadding1D((padding_size, 0))(x)
@@ -124,7 +127,8 @@ class TemporalConvBlock(keras.layers.Layer):
             x = ZeroPadding1D((padding_size // 2, padding_size // 2))(x)
         x = DepthwiseConv1D(self.kernel_size, dilation_rate=self.dilation)(x)  # (bs, fl, filters*(depth_multiplier=1))
         x = PReLU(shared_axes=[1])(x)
-        x = normal_layer(x, self.norm_type)
+        if self.norm_type:
+            x = normal_layer(x, self.norm_type)
         if self.use_residual:
             residual = Conv1D(self.residual_channels, self.kernel_size,
                               padding='same')(x)  # (bs, fl, residual_channels)
