@@ -17,7 +17,7 @@ from error import Error, ParameterError
 
 
 def balancesets(sets):
-    """"Cut to the min number of the element of the list.
+    """Cut to the min number of the element of the list.
     Args:
         sets (list[list[type]]): 2D list.
     Returns:
@@ -72,7 +72,19 @@ class Subsets(object):
         """Input num of one source,
         output 2D list of [subseti][numi]"""
         randseq = list(range(ndata))
-        np.random.shuffle(randseq)
+        np.random.shuffle(randseq)  # warning, this is different with self.randseq
+        subs = []
+        for i in range(len(self.rates)-1):
+            numi = int(self.rates[i]*ndata)  # num of subsets[i]
+            subs.append(randseq[:numi])
+            randseq = randseq[numi:]
+        subs.append(randseq)
+        return subs
+
+    def rand_subsets_nums_with_randseq(self, ndata):
+        """Input num of one source,
+        output 2D list of [subseti][numi]"""
+        randseq = self.randseq.copy()
         subs = []
         for i in range(len(self.rates)-1):
             numi = int(self.rates[i]*ndata)  # num of subsets[i]
@@ -82,7 +94,8 @@ class Subsets(object):
         return subs
 
     def ordersubsetsnums(self, ndata):
-        """Input num of one source, output 2D list of [subseti][numi]"""
+        """Input num of one source,
+        output 2D list of [subseti][numi]"""
         subs = []
         istart = 0
         for i in range(len(self.rates)-1):
@@ -90,6 +103,18 @@ class Subsets(object):
             subs.append(list(range(istart, istart+numi)))
             istart += numi
         subs.append(list(range(istart, ndata)))
+        return subs
+
+    def select_subsets_nums(self, ndata, rates, num_sets=None):
+        """Input num of one source,
+        output 2D list of [subseti][numi]"""
+        randseq = self.randseq.copy()
+        subs = []
+        for i in range(len(self.rates)-1):
+            numi = int(self.rates[i]*ndata)  # num of subsets[i]
+            subs.append(randseq[:numi])
+            randseq = randseq[numi:]
+        subs.append(randseq)
         return subs
 
     def get_randseq(self):
@@ -180,6 +205,7 @@ def list_transpose(ld2, warn=False):
     """Transpose a 2D list.
     Args:
         ld2 (list[list[]]): a 2D list.
+        warn (bool, optional): whether generate a warnning. Default to False.
     Returns:
         ld2_t (list[list[]]): a 2D list transposed.
     Examples:

@@ -9,17 +9,12 @@ E-mail: sun10qinggang@163.com
 """
 import os
 
-import h5py
 import matplotlib.pyplot as plt
 import numpy as np
-import museval
 import pandas as pd
 import seaborn as sns
 
-from error import ParameterError
-from file_operation import list_dirs
-from metric import samerate_acc_np, mse_np
-from prepare_data_shipsear_recognition_mix_s0tos3 import read_data, save_datas
+from prepare_data_shipsear_recognition_mix_s0tos3 import read_data
 from see_metric_separation_extract_table import create_source_names, create_table_1_names, query_targets_of_input, \
     table_names_to_result_names
 
@@ -66,6 +61,7 @@ def query_metric_from_file(path_result, name_input, name_channel, name_target, m
             metric = read_data(path_metric, f'{metric_key}_{name_set}',
                                dict_key=f'{metric_key}_{name_set}')[name_target]
     elif table_num == 2:  # table 2
+
         pass
     return metric
 
@@ -182,7 +178,8 @@ def metric_hdf5_to_df(n_src, path_result, names_inputs, names_channels, names_ta
     metric_df = pd.DataFrame(metric_dict)
     if path_save:
         metric_df.to_json(os.path.join(path_save, f'figure_table_{table_num}_{metric_key}_{name_set}.json'))
-        # metric_df_read = pd.read_json(os.path.join(path_save, f'figure_table_{table_num}_{metric_key}_{name_set}.json'))
+        # metric_df_read = pd.read_json(os.path.join(path_save,
+        #                                            f'figure_table_{table_num}_{metric_key}_{name_set}.json'))
         # metric_df_read_values = metric_df_read['metric'].values
 
     return metric_df
@@ -236,7 +233,7 @@ class DisplayMetric(object):
             config_dict.update({'cut': 0})
 
         if save_mode == 1:
-            fig, axes = plt.subplots(1, num_algo+1, sharey='all', figsize=(40, 15), dpi=1000.0)
+            fig, axes = plt.subplots(1, num_algo + 1, sharey='all', figsize=(40, 15), dpi=1000.0)
         for i_algo in range(0, num_algo + 1):
             metric_i_algo = metrics_df[metrics_df.algorithm_type == i_algo]
             metric_i_algo = metric_i_algo.loc[:, ['model_type', 'target_number', 'metric']]
@@ -271,48 +268,51 @@ if __name__ == '__main__':
     names_inputs_1, names_channels_1, names_targets_1 = create_table_1_names(names_sources, n_src)
 
     path_result_root = '../results'
-    info_list = [{'path': f'{path_result_root}/Known Number/model_13_2_1_lr1e-3_ep100/metric', 'name_para': '1_n3_100',
-                  'algorithm_type': 0, 'model_type': 'BLSTM-MD', 'way': 0},
+    info_list = [{'path': f'{path_result_root}/Known Number/model_13_3_1_lr1e-3_ep300/metric', 'name_para': '1_n3_300',
+                  'algorithm_type': 0, 'model_type': 'DPRNN-MD', 'way': 0},
                  {'path': f'{path_result_root}/Known Number/model_15_2_6_lr1e-3_ep200/metric', 'name_para': '1_n3_200',
                   'algorithm_type': 0, 'model_type': 'Conv-TasNet-MD', 'way': 0},
                  {'path': f'{path_result_root}/Known Number/model_21_6_10_lr1e-3_ep800/metric', 'name_para': '1_n3_800',
                   'algorithm_type': 0, 'model_type': 'Wave-U-Net-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 1/model_13_2_1_lr1e-3_ep100/metric/1_n3_100',
-                  'algorithm_type': 1, 'model_type': 'BLSTM-MD', 'way': 0},
+                 {'path': f'{path_result_root}/Algorithm 1/model_13_3_1_lr1e-3_ep100/metric/1_n3_100',
+                  'algorithm_type': 1, 'model_type': 'DPRNN-MD', 'way': 0},
                  {'path': f'{path_result_root}/Algorithm 1/model_15_2_6_lr1e-3_ep200/metric/1_n3_200',
-                   'algorithm_type': 1, 'model_type': 'Conv-TasNet-MD', 'way': 0},
+                  'algorithm_type': 1, 'model_type': 'Conv-TasNet-MD', 'way': 0},
                  {'path': f'{path_result_root}/Algorithm 1/model_21_6_10_lr1e-4_ep800/metric/1_n4_800',
                   'algorithm_type': 1, 'model_type': 'Wave-U-Net-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 2/model_13_2_1_lr1e-3_ep100/metric/best_mse',
-                  'algorithm_type': 2, 'model_type': 'BLSTM-MD', 'way': 1},
-                 {'path': f'{path_result_root}/Algorithm 2/model_15_2_6_lr1e-3_ep200_tanh_noNL/metric/best_mse',
-                   'algorithm_type': 2, 'model_type': 'Conv-TasNet-MD', 'way': 1},
-                 {'path': f'{path_result_root}/Algorithm 2/model_21_6_10_lr1e-4_ep1600/metric/best_mse',
-                   'algorithm_type': 2, 'model_type': 'Wave-U-Net-MD', 'way': 1},
-                 {'path': f'{path_result_root}/Algorithm 3/model_13_2_1_lr1e-3_ep100/model_lr1e-3_ep100/metric/1_n3_100',
-                   'algorithm_type': 3, 'model_type': 'BLSTM-MD', 'way': 0},
+                 {'path': f'{path_result_root}/Algorithm 2/model_13_2_1_lr1e-3_ep100/metric/best_sum_mse',
+                  'algorithm_type': 2, 'model_type': 'BLSTM-MD', 'way': 0},
+                 {'path': f'{path_result_root}/Algorithm 2/model_15_2_6_lr1e-3_ep200_tanh_noNL/metric/best_sum_mse',
+                  'algorithm_type': 2, 'model_type': 'Conv-TasNet-MD', 'way': 0},
+                 {'path': f'{path_result_root}/Algorithm 2/model_21_6_10_lr1e-4_ep1600/metric/best_sum_mse',
+                  'algorithm_type': 2, 'model_type': 'Wave-U-Net-MD', 'way': 0},
+                 {'path': f'{path_result_root}/Algorithm 3/model_13_3_1_lr1e-3_ep200/model_lr1e-3_ep200/metric/1_n3_200',
+                  'algorithm_type': 3, 'model_type': 'DPRNN-MD', 'way': 0},
                  {'path': f'{path_result_root}/Algorithm 3/model_15_2_6_lr1e-3_ep200/model_lr1e-3_ep200/metric/1_n3_200',
-                   'algorithm_type': 3, 'model_type': 'Conv-TasNet-MD', 'way': 0},
+                  'algorithm_type': 3, 'model_type': 'Conv-TasNet-MD', 'way': 0},
                  {'path': f'{path_result_root}/Algorithm 3/model_21_6_10_lr1e-4_ep1600/model_lr1e-4_ep800/metric/1_n4_800',
-                   'algorithm_type': 3, 'model_type': 'Wave-U-Net-MD', 'way': 0}
-                ]
+                  'algorithm_type': 3, 'model_type': 'Wave-U-Net-MD', 'way': 0}
+                 ]
 
     display_metric_mse = DisplayMetric(info_list)
     metrics_df = display_metric_mse.import_data_to_df(n_src, names_inputs_1, names_channels_1, names_targets_1, 'mse',
                                                       'test')
-    display_metric_mse.display_cat_violin(metrics_df, 'mse', path_save=path_result_root, save_name='fig_2_mse', save_mode=0)
+    display_metric_mse.display_cat_violin(metrics_df, 'mse', path_save=path_result_root, save_name='fig_2_mse',
+                                          save_mode=0)
     display_metric_mse.display_cat_violin(metrics_df, 'mse', path_save=path_result_root, save_name='fig_2_mse')
 
     display_metric_sdr = DisplayMetric(info_list)
     metrics_df = display_metric_sdr.import_data_to_df(n_src, names_inputs_1, names_channels_1, names_targets_1, 'sdr',
                                                       'test')
-    display_metric_sdr.display_cat_violin(metrics_df, 'sdr', path_save=path_result_root, save_name='fig_2_sdr', save_mode=0)
+    display_metric_sdr.display_cat_violin(metrics_df, 'sdr', path_save=path_result_root, save_name='fig_2_sdr',
+                                          save_mode=0)
     display_metric_sdr.display_cat_violin(metrics_df, 'sdr', path_save=path_result_root, save_name='fig_2_sdr')
 
     display_metric_si_snr = DisplayMetric(info_list)
     metrics_df = display_metric_si_snr.import_data_to_df(n_src, names_inputs_1, names_channels_1, names_targets_1,
                                                          'si_snr', 'test')
-    display_metric_si_snr.display_cat_violin(metrics_df, 'si_snr', path_save=path_result_root, save_name='fig_2_si_snr', save_mode=0)
+    display_metric_si_snr.display_cat_violin(metrics_df, 'si_snr', path_save=path_result_root, save_name='fig_2_si_snr',
+                                             save_mode=0)
     display_metric_si_snr.display_cat_violin(metrics_df, 'si_snr', path_save=path_result_root, save_name='fig_2_si_snr')
 
     print('finished')

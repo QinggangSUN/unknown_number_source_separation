@@ -18,7 +18,6 @@ if __name__ == '__main__':
     if tensorflow.__version__ >= '2.0':
         import tensorflow.compat.v1 as tf
         tf.disable_v2_behavior()
-        # from tensorflow import keras
         import tensorflow.compat.v1.keras.backend as K
     else:
         import tensorflow as tf
@@ -49,15 +48,16 @@ if __name__ == '__main__':
     sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)  # pylint: disable=invalid-name
     K.set_session(sess)
 
-    # for shipsear data
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
     # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
     # SUB_SET_WAY = 'order'
-
-    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
+    # SPLIT_WAY = None
+    SPLIT_WAY = 'split'
+    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav',
+                                   scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY, split_way=SPLIT_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
 
@@ -100,24 +100,6 @@ if __name__ == '__main__':
                 x_dict_i[key] = np.expand_dims(np.squeeze(value), axis=-1)  # (nsamples, frame_length, 1)
                 logging.debug(f'x_i.name {key}')
                 logging.debug(f'x_i.shape {x_dict_i[key].shape}')
-
-            # search_model(PATH_RESULT, 'model_8_2_1', input_dim, x_dict_i, z_dict_i, None,
-            #              **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 1, 'n_filters': 64,
-            #                  'rnn_type': 'BLSTM', 'latent_dim': 200, 'n_rnn_decoder': 1,
-            #                  'bool_train': True, 'bool_test_ae': False,
-            #                  'bool_save_ed': False, 'bool_test_ed': False,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True,
-            #                  'bool_test_ae_w': True, 'bool_test_ed_w': False})
-
-            # search_model(PATH_RESULT, 'model_8_4_1', input_dim, x_dict_i, z_dict_i, None,
-            #              **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 1, 'n_filters': 64, 'use_bias': False,
-            #                  'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
-            #                  'bool_train': True, 'bool_test_ae': False,
-            #                  'bool_save_ed': False, 'bool_test_ed': False,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True,
-            #                  'bool_test_ae_w': True, 'bool_test_ed_w': False})
 
             # model_10 RNN TasNet
             search_model(PATH_RESULT, 'model_10_2_1', input_dim, x_dict_i, z_dict_i, None,
@@ -163,7 +145,7 @@ if __name__ == '__main__':
                              'bool_clean_weight_file': True, 'bool_test_weight': True,
                              'bool_test_ae_w': True, 'bool_test_ed_w': False})
 
-            # Multiple-Decoder Conv-Tasnet without mask
+            # Multiple-Decoder Conv-TasNet without mask
             search_model(PATH_RESULT, 'model_15_2_6', input_dim, x_dict_i, z_dict_i, None,
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': 4,
                             'epochs': 200, 'batch_size': 6, 'bs_pred': 6,
@@ -171,6 +153,7 @@ if __name__ == '__main__':
                             'n_conv_encoder': 1, 'n_filters_encoder': 64,
                             'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
                             'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
+                            'output_activation': 'tanh',
                             'bool_train': True, 'bool_test_ae': False,
                             'bool_save_ed': False, 'bool_test_ed': False,
                             'bool_clean_weight_file': True, 'bool_test_weight': True,

@@ -19,8 +19,10 @@ import shutil
 
 import h5py
 import tensorflow
+
 if tensorflow.__version__ >= '2.0':
     import tensorflow.compat.v1 as tf
+
     tf.disable_v2_behavior()
     from tensorflow import keras
     import tensorflow.compat.v1.keras.backend as K
@@ -30,6 +32,7 @@ else:
     from keras import backend as K
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, TensorBoard
+
 if keras.__version__ >= '2.3.1':
     from keras.layers import LayerNormalization
 else:
@@ -102,7 +105,7 @@ def create_decoder_weight_model(decoder_model=None, path_save_model=None, auto_m
     n_decoder_layer = len(decoder_model.layers[1:])
     for i, layer in enumerate(auto_model.layers[-n_decoder_layer:]):
         layer_weights = layer.get_weights()
-        decoder_model.layers[i+1].set_weights(layer_weights)
+        decoder_model.layers[i + 1].set_weights(layer_weights)
 
     decoder_model.save(decoder_weight_model_name)
 
@@ -240,6 +243,7 @@ def build_model_search(n_outputs, encoded_shape, model_sub_decoders):
         encoded_shape (tuple(int)): shape of the encoded vector.
         model_sub_decoders (list[keras.Model]): sub model of the decoders.
     """
+
     def layer_para_input(inputs, encoded_shape):
         """Trick for trainable input layer through a dense (or 1*1 conv) layer.
         Args:
@@ -285,7 +289,7 @@ def build_model_search(n_outputs, encoded_shape, model_sub_decoders):
     if n_outputs > 1:
         if K.ndim(decoded_srcs[0]) == 2:
             for i, decoded_src_i in enumerate(decoded_srcs):
-                decoded_srcs[i] = Reshape(tuple(K.int_shape(decoded_src_i)[1:])+(1,))(decoded_src_i)
+                decoded_srcs[i] = Reshape(tuple(K.int_shape(decoded_src_i)[1:]) + (1,))(decoded_src_i)
         decoded = keras.layers.Add()(decoded_srcs)
         logging.debug(f'decoded {decoded}')
     else:
@@ -295,8 +299,8 @@ def build_model_search(n_outputs, encoded_shape, model_sub_decoders):
 
 
 def build_model_1_search(encoded_shape, output_dim, path_weight_decoder_files, dict_model_load=None,
-                         n_outputs=1, encoding_dim=2, act_c='relu', n_nodes=[8, 4, 2],
-                         batch_norm=False, layer_norm=False, use_bias=True):
+                         n_outputs=1, encoding_dim=2, act_c='relu', n_nodes=(8, 4, 2),
+                         batch_norm=False, layer_norm=False, use_bias=True, output_activation=None):
     """Build search model with struct model_1.
     Args:
         encoded_shape (tuple(int)): shape of the encoded vector.
@@ -310,7 +314,9 @@ def build_model_1_search(encoded_shape, output_dim, path_weight_decoder_files, d
         batch_norm (bool, optional): whether using batch normalization layer. Defaults to False.
         layer_norm (bool, optional): whether using layer normalization layer. Defaults to False.
         use_bias (bool, optional): whether using bias in all neurons. Defaults to True.
+        output_activation (str, optional): activation function of output layers. Defaults to None.
     """
+
     def sub_decoder(weight_model_name):
         """Create sub decoder model from autoencoder model with trained weights.
         Args:
@@ -320,22 +326,22 @@ def build_model_1_search(encoded_shape, output_dim, path_weight_decoder_files, d
         """
         inputs = Input(encoded_shape)
         x = inputs
-        for i in range(len(n_nodes)-1, -1, -1):
+        for i in range(len(n_nodes) - 1, -1, -1):
             x = Dense(int(encoding_dim * n_nodes[i]), activation=act_c, use_bias=use_bias)(x)
             if batch_norm:
                 x = BatchNormalization()(x)
             if layer_norm:
                 x = LayerNormalization(center=False, scale=False)(x)
-        decoded = Dense(output_dim, activation='tanh', use_bias=use_bias)(x)
+        decoded = Dense(output_dim, activation=output_activation, use_bias=use_bias)(x)
         model_decoder = Model(inputs, decoded)
         logging.debug(f'model_decoder create \n {model_decoder.summary()}')
 
         model_weight = load_model(weight_model_name, dict_model_load)
         logging.debug(f'model_decoder loaded \n {model_weight.summary()}')
         for i, layer in enumerate(model_weight.layers[1:]):
-            model_decoder.layers[i+1].trainable = False
+            model_decoder.layers[i + 1].trainable = False
             layer_weights = layer.get_weights()
-            model_decoder.layers[i+1].set_weights(layer_weights)
+            model_decoder.layers[i + 1].set_weights(layer_weights)
         return model_decoder
 
     model_sub_decoders = [sub_decoder(name_i) for name_i in path_weight_decoder_files]
@@ -365,6 +371,7 @@ def build_model_8_search(encoded_shape, path_weight_decoder_files, dict_model_lo
         n_outputs (int): number of output srcs.
         batch_size (int): batch size of the samples during training.
     """
+
     def rnn_layer(rnn_type, x):
         """RNN layer of the model.
         Args:
@@ -376,11 +383,11 @@ def build_model_8_search(encoded_shape, path_weight_decoder_files, dict_model_lo
         if rnn_type == 'LSTM':
             x = LSTM(units_r, use_bias=use_bias, activation=act_r, return_sequences=True)(x)
         if rnn_type == 'BLSTM':
-            x = Bidirectional(LSTM(units_r//2, use_bias=use_bias, activation=act_r, return_sequences=True))(x)
+            x = Bidirectional(LSTM(units_r // 2, use_bias=use_bias, activation=act_r, return_sequences=True))(x)
         elif rnn_type == 'dprnn':
             frame_length = input_dim + n_pad_input
             n_full_chunks = frame_length // chunk_size
-            n_overlapping_chunks = n_full_chunks*2-1
+            n_overlapping_chunks = n_full_chunks * 2 - 1
             x = dprnn_block(x, is_last_dprnn=False, num_overlapping_chunks=n_overlapping_chunks, chunk_size=chunk_size,
                             num_filters_in_encoder=n_filters_conv, units_per_lstm=units_r,
                             use_bias=use_bias, act_r=act_r, batch_size=batch_size)
@@ -399,7 +406,7 @@ def build_model_8_search(encoded_shape, path_weight_decoder_files, dict_model_lo
             x = rnn_layer(rnn_type, x)
         logging.debug(f'rnn out {x}')  # (32, 329, units)
         if rnn_type == 'dprnn':
-            x = Reshape(tuple(K.int_shape(x)[1:-2]+(-1,)))(x)
+            x = Reshape(tuple(K.int_shape(x)[1:-2] + (-1,)))(x)
 
         x = Dense(units=chunk_size, use_bias=use_bias)(x)
         x = LayerNormalization(center=False, scale=False)(x)
@@ -413,9 +420,9 @@ def build_model_8_search(encoded_shape, path_weight_decoder_files, dict_model_lo
         model_weight = load_model(weight_model_name, dict_model_load)
         logging.debug(f'model_decoder loaded \n {model_weight.summary()}')
         for i, layer in enumerate(model_weight.layers[1:]):
-            model_decoder.layers[i+1].trainable = False
+            model_decoder.layers[i + 1].trainable = False
             layer_weights = layer.get_weights()
-            model_decoder.layers[i+1].set_weights(layer_weights)
+            model_decoder.layers[i + 1].set_weights(layer_weights)
         return model_decoder
 
     model_sub_decoders = [sub_decoder(name_i) for name_i in path_weight_decoder_files]
@@ -429,6 +436,7 @@ def build_model_12_search(encoded_shape, path_weight_decoder_files, dict_model_l
                           n_block_decoder, block_type, use_bias,
                           n_outputs, is_multiple_decoder=False,
                           units_r=None, act_r=None, use_ln_decoder=False, batch_size=None,
+                          output_activation=None,
                           ):
     """Build search model with struct model_12.
     Args:
@@ -446,11 +454,13 @@ def build_model_12_search(encoded_shape, path_weight_decoder_files, dict_model_l
         block_type (str): type of the RNN layer.
         use_bias (bool): whether using bias in all neurons.
         n_outputs (int): number of output srcs.
-        is_multiple_decoder (bool, optional): whether the network is encoder - multiple decoder structure. Defaults to False.
+        is_multiple_decoder (bool, optional): whether the network is encoder - multiple decoder structure.
+            Defaults to False.
         units_r (int, optional): number of the units in an RNN layer. Defaults to None.
         act_r (str, optional): activation function in RNN layer. Defaults to None.
         use_ln_decoder (bool, optional): whether using layer normalization layers in decoder layers. Defaults to False.
         batch_size (int, optional): batch size of the samples during training. Defaults to None.
+        output_activation (str, optional): activation function of output layers. Defaults to None.
     """
     frame_length = input_dim + n_pad_input
 
@@ -466,7 +476,7 @@ def build_model_12_search(encoded_shape, path_weight_decoder_files, dict_model_l
             outputs = LSTM(units_r, activation=act_r, use_bias=use_bias, return_sequences=True)(inputs)
         if block_type == 'BLSTM':
             outputs = Bidirectional(LSTM(units_r // 2, activation=act_r,
-                                    use_bias=use_bias, return_sequences=True))(inputs)
+                                         use_bias=use_bias, return_sequences=True))(inputs)
         elif block_type == 'dprnn':
             is_last_block = kwargs['is_last_block'] if 'is_last_block' in kwargs.keys() else False
             n_speakers = kwargs['n_speakers'] if 'n_speakers' in kwargs.keys() else 1
@@ -486,6 +496,7 @@ def build_model_12_search(encoded_shape, path_weight_decoder_files, dict_model_l
         Returns:
             model_decoder (keras.Model): sub decoder model of the autoencoder model.
         """
+
         def slice_tensor(tensor, index_channel):
             return tensor[:, :, :, index_channel]
 
@@ -512,7 +523,7 @@ def build_model_12_search(encoded_shape, path_weight_decoder_files, dict_model_l
         if not is_multiple_decoder:
             x = Reshape((frame_length, n_filters_encoder, 1))(x)  # (bs, fl=10560, n_filters_encoder=64, n_speakers=1)
             x = Lambda(slice_tensor, arguments={'index_channel': 0})(x)
-        x = Dense(units=kernel_size, use_bias=use_bias)(x)  # (bs, fl=10560, dim_fc=kernel_size)
+        x = Dense(units=kernel_size, use_bias=use_bias, activation=output_activation)(x)  # (bs, fl=10560, dim_fc=kernel_size)
         if use_ln_decoder:
             x = LayerNormalization(center=False, scale=False)(x)  # (bs, fl=10560, dim_fc=kernel_size)
         x = Lambda(lambda x: overlap_and_add_in_decoder(x, strides))(x)  # (bs, fl=10560)
@@ -525,9 +536,9 @@ def build_model_12_search(encoded_shape, path_weight_decoder_files, dict_model_l
         model_weight = load_model(weight_model_name, dict_model_load)
         logging.debug(f'model_decoder loaded \n {model_weight.summary()}')
         for i, layer in enumerate(model_weight.layers[1:]):
-            model_decoder.layers[i+1].trainable = False
+            model_decoder.layers[i + 1].trainable = False
             layer_weights = layer.get_weights()
-            model_decoder.layers[i+1].set_weights(layer_weights)
+            model_decoder.layers[i + 1].set_weights(layer_weights)
         return model_decoder
 
     model_sub_decoders = [sub_decoder(name_i) for name_i in path_weight_decoder_files]
@@ -541,6 +552,7 @@ def build_model_14_search(encoded_shape, path_weight_decoder_files, dict_model_l
                           n_channels_conv, n_channels_bottleneck, n_channels_skip,
                           n_block_decoder, n_layer_each_block, kernel_size, causal, norm_type,
                           n_outputs, use_residual=True, use_skip=True, use_sum_repeats=False,
+                          output_activation=None,
                           ):
     """Build search model with struct model_14.
     Args:
@@ -559,12 +571,13 @@ def build_model_14_search(encoded_shape, path_weight_decoder_files, dict_model_l
         n_layer_each_block (int): X.
         kernel_size (int): P.
         causal (bool): whether support causal.
-        norm_type (str): type of normolization layers.
+        norm_type (str): type of normalization layers.
         n_outputs (int): number of output srcs.
-        use_residual (bool, optional): whether use a 1x1-conv of residual path in TCN block. Defaults to True.
-        use_skip (bool, optional): whether use a 1x1-conv of skip-connection path in TCN block. Defaults to True.
+        use_residual (bool, optional): whether to use a 1x1-conv of residual path in TCN block. Defaults to True.
+        use_skip (bool, optional): whether to use a 1x1-conv of skip-connection path in TCN block. Defaults to True.
         use_sum_repeats (bool, optional): whether use sums of skip-connection paths and residual path in each repeat.
                                         Defaults to False.
+        output_activation (str, optional): activation function of output layers. Defaults to None.
     """
     # frame_length = input_dim + n_pad_input
     frame_length = input_dim
@@ -595,7 +608,7 @@ def build_model_14_search(encoded_shape, path_weight_decoder_files, dict_model_l
         logging.debug(f'decoded_src_i reshape {decoded_src_i}')
 
         decoded = conv1d_transpose(decoded_src_i, 1, kernel_size_encoder,
-                                   strides=strides_encoder, activation=None, padding='same')
+                                   strides=strides_encoder, activation=output_activation, padding='same')
         logging.debug(f'decoded {decoded}')  # (bs=32, fl=10547, 1)
 
         model_decoder = Model(inputs, decoded)
@@ -604,9 +617,9 @@ def build_model_14_search(encoded_shape, path_weight_decoder_files, dict_model_l
         model_weight = load_model(weight_model_name, dict_model_load)
         logging.debug(f'model_decoder loaded \n {model_weight.summary()}')
         for i, layer in enumerate(model_weight.layers[1:]):
-            model_decoder.layers[i+1].trainable = False
+            model_decoder.layers[i + 1].trainable = False
             layer_weights = layer.get_weights()
-            model_decoder.layers[i+1].set_weights(layer_weights)
+            model_decoder.layers[i + 1].set_weights(layer_weights)
         return model_decoder
 
     model_sub_decoders = [sub_decoder(name_i) for name_i in path_weight_decoder_files]
@@ -616,9 +629,7 @@ def build_model_14_search(encoded_shape, path_weight_decoder_files, dict_model_l
 
 def build_model_20_search(encoded_shape, path_weight_decoder_files, dict_model_load,
                           input_dim, n_pad_input, n_outputs,
-                          # is_multiple_decoder=False,
                           num_channels=1, num_layers=12, num_initial_filters=24,
-                          #   kernel_size=15,
                           use_bias=True, merge_filter_size=5, output_filter_size=1,
                           padding='same', context=False, upsampling_type='learned', batch_norm=False,
                           output_activation='linear'):
@@ -629,17 +640,35 @@ def build_model_20_search(encoded_shape, path_weight_decoder_files, dict_model_l
         dict_model_load (dict): custom objects for load model.
         input_dim (int): dim of the input vector.
         n_pad_input (int): network input = input_dim + n_pad_input.
-        use_bias (bool): whether using bias in all neurons.
         n_outputs (int): number of output srcs.
-        is_multiple_decoder (bool, optional): whether the network is encoder - multiple decoder structure. Defaults to False.
-        batch_size (int, optional): batch size of the samples during training. Defaults to None.
+        num_channels (int, optional): number of channels of audio. Defaults to 1.
+        num_layers (int, optional): number of layers of U-Net encoder or decoder. Defaults to 12.
+        num_initial_filters (int, optional): initial number of filters of convolutional layers. Defaults to 24.
+        use_bias (bool): whether using bias in all neurons.
+        merge_filter_size (int, optional): Kernel size in convolutional layers after concat layers. Defaults to 5.
+        output_filter_size (int, optional): number of filters of convolutional layers before output layers.
+            Defaults to 1.
+        padding (str, optional): padding type of convolutional layers. Defaults to "same".
+        context (bool, optional): shape in bi-linear interpolation resize layers. Defaults to False.
+        upsampling_type (str, optional): type of up-sampling layers. Defaults to "learned".
+        batch_norm (bool, optional): whether using batch normalization layers. Defaults to False.
+        output_activation (str, optional): activation function of output layers. Defaults to "linear".
     """
+
     # frame_length = input_dim + n_pad_input
 
     def img_resize(x, shape, align_corners=False):
         return tf.image.resize_bilinear(x, [1, shape], align_corners=align_corners)
 
     def decoder_block(X, num_layers, i_branch=None):
+        """Create decoder block.
+        Args:
+            X (keras.Tensor): input tensor of the block.
+            num_layers (int): number of layers of U-Net decoder.
+            i_branch (int): index of the branch.
+        Returns:
+            X (keras.Tensor): output tensor of the block.
+        """
         # Up sampling
         for i_layer in range(num_layers):
             X = Lambda(lambda x: K.expand_dims(x, axis=1),
@@ -684,6 +713,7 @@ def build_model_20_search(encoded_shape, path_weight_decoder_files, dict_model_l
         """Create sub decoder model from autoencoder model with trained weights.
         Args:
             weight_model_name (str): full file name with path of the trained autoencoder model.
+            i_branch (int): index of the branch.
         Returns:
             model_decoder (keras.Model): sub decoder model of the autoencoder model.
         """
@@ -693,7 +723,7 @@ def build_model_20_search(encoded_shape, path_weight_decoder_files, dict_model_l
         logging.debug(f'block out {x}')
         x = Conv1D(num_channels, output_filter_size, use_bias=use_bias,
                    padding=padding, activation=output_activation,
-                   name="independent_out_"+str(i_branch))(x)
+                   name="independent_out_" + str(i_branch))(x)
         if output_activation not in {'tanh'}:
             x = AudioClipLayer()(x)
         decoded = Lambda(lambda x: x[:, 0:input_dim, :])(x)
@@ -704,9 +734,9 @@ def build_model_20_search(encoded_shape, path_weight_decoder_files, dict_model_l
         model_weight = load_model(weight_model_name, dict_model_load)
         logging.debug(f'model_decoder loaded \n {model_weight.summary()}')
         for i, layer in enumerate(model_weight.layers[1:]):
-            model_decoder.layers[i+1].trainable = False
+            model_decoder.layers[i + 1].trainable = False
             layer_weights = layer.get_weights()
-            model_decoder.layers[i+1].set_weights(layer_weights)
+            model_decoder.layers[i + 1].set_weights(layer_weights)
         return model_decoder
 
     model_sub_decoders = [sub_decoder(name_i, i_branch) for i_branch, name_i in enumerate(path_weight_decoder_files)]
@@ -742,7 +772,7 @@ def train_model_search(z_dict, paras, path_save, modelname=None,
     metrics_func = paras['metrics_func'] if 'metrics_func' in paras.keys() else [samerate_acc_d2]
     metrics_name = paras['metrics_name'] if 'metrics_name' in paras.keys() else ['samerate_acc_d2']
     optimizer_type = paras['optimizer'] if 'optimizer' in paras.keys() else 'adm'
-    learn_rate = paras['learn_rate'] if 'learn_rate' in paras.keys() else paras['lr_i']*(10**paras['lr_j'])
+    learn_rate = paras['learn_rate'] if 'learn_rate' in paras.keys() else paras['lr_i'] * (10 ** paras['lr_j'])
     bool_clean_weight_file = kwargs['bool_clean_weight_file'] if 'bool_clean_weight_file' in kwargs.keys() else True
 
     z_name = next(iter(z_dict.keys()))
@@ -754,7 +784,7 @@ def train_model_search(z_dict, paras, path_save, modelname=None,
     path_check = os.path.join(path_save, 'search_model', z_name, modelname)
     mkdir(path_check)
     for num_j, z_train_j in enumerate(z_train):
-        str_num_j = '0'*(5-len(str(num_j)))+str(num_j)
+        str_num_j = '0' * (5 - len(str(num_j))) + str(num_j)
         path_check_j = os.path.join(path_check, f'num_{str_num_j}')
         mkdir(path_check_j)
 
@@ -765,11 +795,11 @@ def train_model_search(z_dict, paras, path_save, modelname=None,
             optimizer = optimizers.SGD(lr=learn_rate, decay=1e-6, momentum=0.9, nesterov=True)
 
         z_train_j = np.expand_dims(np.asarray(z_train_j), axis=0)
-        dummy_input = np.ones(tuple(K.int_shape(model.inputs[0])[1:2])+(1,))
+        dummy_input = np.ones(tuple(K.int_shape(model.inputs[0])[1:2]) + (1,))
         x_train_j = np.expand_dims(np.asarray(dummy_input), axis=0)  # (1, n_outputs, 1)
 
         model.compile(optimizer=optimizer, loss=loss_func, metrics=metrics_func)
-        check_filename = os.path.join(path_check_j, f'weights_{modelname}'+'_{epoch:02d}_{loss:.2f}.hdf5')
+        check_filename = os.path.join(path_check_j, f'weights_{modelname}' + '_{epoch:02d}_{loss:.2f}.hdf5')
         checkpoint = ModelCheckpoint(filepath=check_filename, monitor='loss', mode='auto',
                                      verbose=1, period=1, save_best_only=True)
         history = model.fit(x=x_train_j,
@@ -901,32 +931,41 @@ def transpose_names_to_para_src(path_weight_files):
 
 
 def search_best_model(path_result_root, src_names,
-                      model_name, encoded_shape, output_dim, z_dict, model_para_name=None, **kwargs):
+                      model_name, encoded_shape, output_dim, z_dict, model_para_name=None,
+                      path_result_model=None, path_save_search_decoder=None, dir_name_save='search_decoder',
+                      **kwargs):
     """For search best model.
     Args:
         path_result_root (str): where to save result.
-        src_names (list[str]): list of src names, e.g. ['Z_0_train',...,'Z_7_ns_test'].
+        src_names (list[str]): list of src names, e.g. ['Z_0_ns',...,'Z_3_ns'].
         model_name (str): name of the model.
         encoded_shape (tuple(int)): shape of the encoded vector.
         output_dim (int): shape of output tensor, length of the sample.
         z_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): dict of model output, data to predict,
             sum of the outputs, which is the given input vector in separation problem.
         model_para_name (str, optional): for model name. Defaults to None.
+        path_result_model (os.Path): path where the ae models saved.
+        path_save_search_decoder (os.Path): path where to save results.
+        dir_name_save (str): directory name where to save results.
     """
 
-    def compute_weight_layer_index(num_model, **kwargs):
+    def compute_weight_layer_index(num_model, n_outputs):
         """Compute index of the layers to load weights.
         Args:
             num_model (int): type of the model.
+            n_outputs (int): number of output channels.
         Returns:
             weight_layer_index (tuple[int]): index of the layers for searching input of search_model.
         """
         if num_model in (1, 8, 12, 13, 15, 21):
-            weight_layer_index = tuple(range(9, 13))
+            weight_layer_index = tuple(range(2 * n_outputs + 1, 3 * n_outputs + 1))
         return weight_layer_index
 
-    path_result_model = os.path.join(path_result_root, model_name)
-    path_save_search_decoder = os.path.join(path_result_model, 'search_decoder')
+    if path_result_model is None:
+        path_result_model = os.path.join(path_result_root, model_name)
+    mkdir(path_result_model)
+    if path_save_search_decoder is None:
+        path_save_search_decoder = os.path.join(path_result_model, dir_name_save)
     mkdir(path_save_search_decoder)
 
     num_model = compute_num_model(model_name)
@@ -971,6 +1010,7 @@ def search_best_model(path_result_root, src_names,
             use_bias = kwargs['use_bias'] if 'use_bias' in kwargs.keys() else True
             n_outputs = kwargs['n_outputs'] if 'n_outputs' in kwargs.keys() else 4
             batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else None
+            output_activation = kwargs['output_activation'] if 'output_activation' in kwargs.keys() else None
         elif num_model in (12, 13):
             input_dim = kwargs['input_dim'] if 'input_dim' in kwargs.keys() else 10547
             n_pad_input = kwargs['n_pad_input'] if 'n_pad_input' in kwargs.keys() else 13
@@ -988,6 +1028,7 @@ def search_best_model(path_result_root, src_names,
             act_r = kwargs['act_r'] if 'act_r' in kwargs.keys() else 'tanh'
             use_ln_decoder = kwargs['use_ln_decoder'] if 'use_ln_decoder' in kwargs.keys() else False
             batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else None
+            output_activation = kwargs['output_activation'] if 'output_activation' in kwargs.keys() else None
         elif num_model in (15,):
             input_dim = kwargs['input_dim'] if 'input_dim' in kwargs.keys() else 10547
             n_pad_input = kwargs['n_pad_input'] if 'n_pad_input' in kwargs.keys() else 13  # unused
@@ -1006,6 +1047,7 @@ def search_best_model(path_result_root, src_names,
             use_residual = kwargs['use_residual'] if 'use_residual' in kwargs.keys() else True
             use_skip = kwargs['use_skip'] if 'use_skip' in kwargs.keys() else True
             use_sum_repeats = kwargs['use_sum_repeats'] if 'use_sum_repeats' in kwargs.keys() else False
+            output_activation = kwargs['output_activation'] if 'output_activation' in kwargs.keys() else None
         elif num_model in (21,):
             input_dim = kwargs['input_dim'] if 'input_dim' in kwargs.keys() else 10547
             n_pad_input = kwargs['n_pad_input'] if 'n_pad_input' in kwargs.keys() else 1741
@@ -1031,14 +1073,16 @@ def search_best_model(path_result_root, src_names,
             n_nodes = kwargs['n_nodes'] if 'n_nodes' in kwargs.keys() else [8, 4, 2]
             batch_norm = kwargs['batch_norm'] if 'batch_norm' in kwargs.keys() else False
             use_bias = kwargs['use_bias'] if 'use_bias' in kwargs.keys() else True
+            output_activation = kwargs['output_activation'] if 'output_activation' in kwargs.keys() else None
             search_model = build_model_1_search(encoded_shape, output_dim, decoder_weight_model_names_i,
                                                 dict_model_load=dict_model_load,
                                                 n_outputs=n_outputs, encoding_dim=encoding_dim, act_c=act_c,
                                                 n_nodes=n_nodes,
-                                                batch_norm=batch_norm, use_bias=use_bias)
+                                                batch_norm=batch_norm, use_bias=use_bias,
+                                                output_activation=output_activation)
             search_model.save(search_model_name_i)
             save_model_struct(search_model, path_search_model_i, 'search_model_struct')
-        elif num_model in (8, ):
+        elif num_model in (8,):
             search_model = build_model_8_search(encoded_shape, decoder_weight_model_names_i, dict_model_load,
                                                 input_dim, n_pad_input, chunk_size, chunk_advance,
                                                 n_filters_conv, n_rnn_decoder, rnn_type, units_r, act_r, use_bias,
@@ -1051,7 +1095,8 @@ def search_best_model(path_result_root, src_names,
                                                  n_filters_encoder, kernel_size, strides,
                                                  n_block_decoder, block_type, use_bias,
                                                  n_outputs, is_multiple_decoder,
-                                                 units_r, act_r, use_ln_decoder, batch_size)
+                                                 units_r, act_r, use_ln_decoder, batch_size,
+                                                 output_activation)
             search_model.save(search_model_name_i)
             save_model_struct(search_model, path_search_model_i, 'search_model_struct')
         elif num_model in (15,):
@@ -1060,7 +1105,7 @@ def search_best_model(path_result_root, src_names,
                                                  n_filters_encoder, kernel_size_encoder, strides_encoder,
                                                  n_channels_conv, n_channels_bottleneck, n_channels_skip,
                                                  n_block_decoder, n_layer_each_block, kernel_size, causal, norm_type,
-                                                 n_outputs, use_residual, use_skip, use_sum_repeats,
+                                                 n_outputs, use_residual, use_skip, use_sum_repeats, output_activation,
                                                  )
             search_model.save(search_model_name_i)
             save_model_struct(search_model, path_search_model_i, 'search_model_struct')
@@ -1111,7 +1156,7 @@ def search_best_model(path_result_root, src_names,
                                                                           ) else True
         bs_pred = kwargs['bs_pred'] if 'bs_pred' in kwargs.keys() else 8
         if bool_predict_weight_file:
-            weight_layer_index = compute_weight_layer_index(num_model, **kwargs)
+            weight_layer_index = compute_weight_layer_index(num_model, n_outputs)
             path_save_search_decoder_para_j = os.path.join(path_save_search_decoder_para_i, 'search_model',
                                                            z_name, model_para_name)
             path_predict_j = os.path.join(path_save_search_decoder_para_i, 'predict_decoder', model_para_name)
@@ -1155,12 +1200,14 @@ if __name__ == '__main__':
     # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
     # SUB_SET_WAY = 'order'
-
-    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
+    # SPLIT_WAY = None
+    SPLIT_WAY = 'split'
+    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav',
+                                   scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY, split_way=SPLIT_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
 
-    SET_NAMES = ['train', 'val', 'test'][2:3]   # you may only run on test set
+    SET_NAMES = ['train', 'val', 'test'][2:3]  # you may only run on test set
     S_NAMES = []  # [n_source][n_set]
     for i in range(4):
         S_NAMES.append([f'Z_{i}_ns_{name_set_j}' for name_set_j in SET_NAMES])
@@ -1179,7 +1226,7 @@ if __name__ == '__main__':
             # ------------------------------------------------------------------------------------------------------- #
             # x_data_j = x_data_j[0:200]
             # # If the parameter is too large and out of memory, you may train samples by batches.
-            # # Then manually create and orgnize the files such as follow:
+            # # Then manually create and organize the files such as follows:
             # # ./search_decoder/1_n3_100
             # # └─1_n1_100_test_sets
             # #   ├─test_0_4000
@@ -1231,34 +1278,15 @@ if __name__ == '__main__':
             for key, value in x_dict_j.items():
                 x_dict_j[key] = np.expand_dims(np.squeeze(value), axis=-1)  # (nsamples, frame_length, 1)
 
-            # search_best_model(PATH_RESULT, SRC_NAMES,
-            #              'model_8_1_1', (329, 200), input_dim, x_dict_j,
-            #              **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 100, 'batch_size': 1, 'bs_pred': 1,
-            #                 'rnn_type': 'LSTM', 'units_r': 200, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
-            #                 'bool_train': True, 'bool_predict_weight_file': True})
-
+            # Multiple-Decoder RNN TasNet without mask
             search_best_model(PATH_RESULT, SRC_NAMES,
-                         'model_8_2_1', (329, 200), input_dim, x_dict_j,
-                         **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 100, 'batch_size': 1, 'bs_pred': 1,
-                            'rnn_type': 'BLSTM', 'units_r': 200, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
-                            'bool_train': True, 'bool_predict_weight_file': True})
+                              'model_13_2_1', (329, 200), input_dim, x_dict_j,
+                              **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 100, 'batch_size': 1, 'bs_pred': 1,
+                                 'block_type': 'BLSTM', 'units_r': 200, 'n_block_decoder': 1, 'n_filters_encoder': 64,
+                                 'is_multiple_decoder': True, 'use_mask': False,
+                                 'bool_train': True, 'bool_predict_weight_file': True})
 
-            # search_best_model(PATH_RESULT, SRC_NAMES,
-            #              'model_8_4_1', (329, 200), input_dim, x_dict_j,
-            #              **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 100, 'batch_size': 1, 'bs_pred': 1,
-            #                 'rnn_type': 'BLSTM', 'units_r': 200, 'n_rnn_decoder': 1, 'n_filters_conv': 64,
-            #                 'use_bias': False,
-            #                 'bool_train': True, 'bool_predict_weight_file': True})
-
-            # model_13 multiple decoder RNN TasNet without mask
-            search_best_model(PATH_RESULT, SRC_NAMES,
-                         'model_13_2_1', (329, 200), input_dim, x_dict_j,
-                         **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 100, 'batch_size': 1, 'bs_pred': 1,
-                            'block_type': 'BLSTM', 'units_r': 200, 'n_block_decoder': 1, 'n_filters_encoder': 64,
-                            'is_multiple_decoder': True, 'use_mask': False,
-                            'bool_train': True, 'bool_predict_weight_file': True})
-
-            # Multiple-Decoder Conv-Tasnet without mask
+            # Multiple-Decoder Conv-TasNet without mask
             search_best_model(PATH_RESULT, SRC_NAMES,
                               'model_15_2_6', (10547, 64), input_dim, x_dict_j,
                               **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 200, 'batch_size': 1, 'bs_pred': 1,
@@ -1272,6 +1300,6 @@ if __name__ == '__main__':
             search_best_model(PATH_RESULT, SRC_NAMES,
                               'model_21_6_10', (660, 120), input_dim, x_dict_j,
                               **{'lr_i': lr_i, 'lr_j': lr_j, 'epochs': 800, 'batch_size': 1, 'bs_pred': 1,
-                                 'n_pad_input': 13, 'num_layers': 4, 
+                                 'n_pad_input': 13, 'num_layers': 4,
                                  'bool_train': True, 'bool_predict_weight_file': True})
     logging.info('finished')

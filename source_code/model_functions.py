@@ -110,6 +110,7 @@ def part_back_model(model, start_tensors, input_layers=None):
         苏剑林. (Sep. 29, 2019). 《'让Keras更酷一些！'：层与模型的重用技巧 》[Blog post]. Retrieved from
         https://kexue.fm/archives/6958
     Args:
+        model (keras.Model): keras model.
         start_tensors (keras.layer.output): output of the layer before back model, where to split model.
         input_layers (keras.layer.Input): input layer of the back model.
     """
@@ -150,7 +151,7 @@ def part_back_model(model, start_tensors, input_layers=None):
                     layers.append(node.outbound_layer)
                 for x in node.output_tensors:
                     tensor_map.add(str(id(x)))
-    model._layers = layers  # keep usefull layers
+    model._layers = layers  # keep useful layers
 
     outputs = model(input_layers)
     model_back = Model(input_layers, outputs)

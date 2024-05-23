@@ -54,7 +54,6 @@ if __name__ == '__main__':
     sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)  # pylint: disable=invalid-name
     K.set_session(sess)
 
-    # for shipsear data
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SET_NAMES = ['train', 'val', 'test']
@@ -63,9 +62,13 @@ if __name__ == '__main__':
     Z_NAMES = [[[f'Z_{i}_ns_{name_set_j}' for name_set_j in SET_NAMES] for i in mix_i] for mix_i in Z_INDEX]
 
     SCALER_DATA = 'max_one'
+    # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
-
-    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
+    # SUB_SET_WAY = 'order'
+    # SPLIT_WAY = None
+    SPLIT_WAY = 'split'
+    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav',
+                                   scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY, split_way=SPLIT_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
 
@@ -116,28 +119,7 @@ if __name__ == '__main__':
                 logging.debug(f'x_i.name {key}')
                 logging.debug(f'x_i.shape {x_dict_i[key].shape}')
 
-            # search_model(path_result_i, 'model_8_2_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 50, 'batch_size': 8, 'bs_pred': 8,
-            #                 'n_conv_encoder': 1, 'n_filters': 64,
-            #                 'rnn_type': 'BLSTM', 'latent_dim': 200,
-            #                 'n_outputs': n_outputs_i,
-            #                 'bool_train': True, 'bool_test_ae': False,
-            #                 'bool_save_ed': False, 'bool_test_ed': False,
-            #                 'bool_clean_weight_file': True, 'bool_test_weight': True,
-            #                 'bool_test_ae_w': True, 'bool_test_ed_w': False})
-            #
-            # search_model(path_result_i, 'model_8_3_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                 'n_conv_encoder': 1, 'n_filters': 64,
-            #                 'rnn_type': 'dprnn', 'latent_dim': 200,
-            #                 'n_outputs': n_outputs_i,
-            #                 'bool_train': True, 'bool_test_ae': False,
-            #                 'bool_save_ed': False, 'bool_test_ed': False,
-            #                 'bool_clean_weight_file': True, 'bool_test_weight': True,
-            #                 'bool_test_ae_w': True, 'bool_test_ed_w': False,
-            #                 'bool_num_padd': True})
-
-            # model_10 RNN TasNet
+            # RNN TasNet
             search_model(path_result_i, 'model_10_1_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
                             'epochs': 50, 'batch_size': 8, 'bs_pred': 8,
@@ -172,7 +154,7 @@ if __name__ == '__main__':
                              'bool_test_ae_w': True, 'bool_test_ed_w': False,
                              'bool_num_padd': True})
 
-            # # model_11 multiple decoder RNN TasNet
+            # multiple decoder RNN TasNet
             # search_model(path_result_i, 'model_11_1_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
             #              **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
             #                 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
@@ -210,7 +192,7 @@ if __name__ == '__main__':
             #                 'bool_test_ae_w': True, 'bool_test_ed_w': False,
             #                 'bool_num_padd': True})
 
-            # # model_12 RNN TasNet without mask
+            # RNN TasNet without mask
             # search_model(path_result_i, 'model_12_1_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
             #              **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
             #                 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
@@ -248,7 +230,7 @@ if __name__ == '__main__':
             #                 'bool_test_ae_w': True, 'bool_test_ed_w': False,
             #                 'bool_num_padd': True})
 
-            # model_13 multiple decoder RNN TasNet without mask
+            # Multiple-Decoder RNN TasNet without mask
             search_model(path_result_i, 'model_13_1_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
                             'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
@@ -275,7 +257,7 @@ if __name__ == '__main__':
 
             search_model(path_result_i, 'model_13_3_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
-                            'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                            'epochs': 300, 'batch_size': 8, 'bs_pred': 8,
                             'n_conv_encoder': 1, 'n_filters_conv': 64,
                             'block_type': 'dprnn', 'latent_dim': 200,
                             'n_block_encoder': 1, 'n_block_decoder': 1,
@@ -293,6 +275,7 @@ if __name__ == '__main__':
                             'n_conv_encoder': 1, 'n_filters_encoder': 64,
                             'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
                             'n_layer_each_block': 5, 'n_block_encoder': 3, 'n_block_decoder': 0,
+                            'output_activation': 'tanh',
                             'bool_train': True, 'bool_test_ae': False,
                             'bool_save_ed': False, 'bool_test_ed': False,
                             'bool_clean_weight_file': True, 'bool_test_weight': True,
@@ -306,6 +289,7 @@ if __name__ == '__main__':
             #                 'n_conv_encoder': 1, 'n_filters_encoder': 64,
             #                 'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
             #                 'n_layer_each_block': 5, 'n_block_encoder': 3, 'n_block_decoder': 0,
+            #                 'output_activation': 'tanh',
             #                 'bool_train': True, 'bool_test_ae': False,
             #                 'bool_save_ed': False, 'bool_test_ed': False,
             #                 'bool_clean_weight_file': True, 'bool_test_weight': True,
@@ -319,12 +303,13 @@ if __name__ == '__main__':
             #                 'n_conv_encoder': 1, 'n_filters_encoder': 64,
             #                 'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
             #                 'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
+            #                 'output_activation': 'tanh',
             #                 'bool_train': True, 'bool_test_ae': False,
             #                 'bool_save_ed': False, 'bool_test_ed': False,
             #                 'bool_clean_weight_file': True, 'bool_test_weight': True,
             #                 'bool_test_ae_w': True, 'bool_test_ed_w': False})
 
-            # Multiple-Decoder Conv-Tasnet without mask
+            # Multiple-Decoder Conv-TasNet without mask
             search_model(path_result_i, 'model_15_2_6', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
                             'epochs': 200, 'batch_size': 6, 'bs_pred': 6,
@@ -332,6 +317,7 @@ if __name__ == '__main__':
                             'n_conv_encoder': 1, 'n_filters_encoder': 64,
                             'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
                             'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
+                            'output_activation': 'tanh',
                             'bool_train': True, 'bool_test_ae': False,
                             'bool_save_ed': False, 'bool_test_ed': False,
                             'bool_clean_weight_file': True, 'bool_test_weight': True,

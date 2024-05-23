@@ -41,7 +41,7 @@ class ListDecodedFiles(object):
         for path_model in path_models:
             path_model_srcs.append([os.path.join(path_model, 'auto_model', src_name) for src_name in src_names])
 
-        path_model_src_paras = []  # [model][src][para_name], every src must has same num of para_name
+        path_model_src_paras = []  # [model][src][para_name], every src must have same num of para_name
         name_model_src_paras = []  # [model][src][para_name]
         path_weight_files = []  # [model][src][para_name][weight_file]
         name_weight_files = []  # [model][src][para_name][weight_file]
@@ -106,7 +106,7 @@ class ListDecodedFiles(object):
         """Filter item belong to specific model.
         Args:
             model_name (str): name of the model.
-            item (str): keword name of the item.
+            item (str): keyword name of the item.
         Returns:
             items_filter: item belong to specific model.
         """
@@ -123,7 +123,7 @@ class ListDecodedFiles(object):
 def data_reshape_same(data_1, data_2, mode='transpose'):
     """Reshape data_2 to shape of data_1.
         data_1.shape == (nsams, channel=1, fl)
-        Be carefull, most time should use transpose rather than reshape.
+        Be careful, most time should use transpose rather than reshape.
     Args:
         data_1 (list[np.ndarray] or np.ndarray): data_1 with target data shape.
         data_2 (list[np.ndarray] or np.ndarray): data_2 to reshape.
@@ -307,9 +307,13 @@ if __name__ == '__main__':
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
+    # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
-
-    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
+    # SUB_SET_WAY = 'order'
+    # SPLIT_WAY = None
+    SPLIT_WAY = 'split'
+    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav',
+                                   scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY, split_way=SPLIT_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
     # -----------------------------------------------------------------------------------------

@@ -17,3 +17,9 @@ v1.2 Fix some problems and add some new features
            Add TensorFlow 2.x support.
            Add more violin plots of metrics.
            Add more results of experiments.
+v1.3 Fix some problems and add more experiments
+       Fix bugs:
+           Fix dataset splitting for separation with unknown numbers.
+           Add AE models parameter "output_activation", fix related results.
+       New features:
+           Add experiments separation using autoencoder-separator approach with known numbers.

@@ -40,10 +40,10 @@ from .wave_u_net.layers import AudioClipLayer, CropLayer, CropConcatLayer, Inter
 from error import ParameterError
 
 
-def build_model_1(input_dim, encoding_dim, output_dim, act_c, n_nodes=[8, 4, 2], batch_norm=False, layer_norm=False,
-                  n_outputs=1, use_bias=True):
+def build_model_1(input_dim, encoding_dim, output_dim, act_c, n_nodes=(8, 4, 2), batch_norm=False, layer_norm=False,
+                  n_outputs=1, use_bias=True, output_activation=None):
     """Mlp autoencoder."""
-    input_frames = Input(shape=(input_dim, ))
+    input_frames = Input(shape=(input_dim,))
 
     x = input_frames
     for n_node in n_nodes:
@@ -60,18 +60,18 @@ def build_model_1(input_dim, encoding_dim, output_dim, act_c, n_nodes=[8, 4, 2],
         decoded_srcs = []
         for i in range(n_outputs):
             x = inputs
-            for j in range(len(n_nodes)-1, -1, -1):
+            for j in range(len(n_nodes) - 1, -1, -1):
                 x = Dense(int(encoding_dim * n_nodes[j]), activation=act_c, use_bias=use_bias)(x)
                 if batch_norm:
                     x = BatchNormalization()(x)
                 if layer_norm:
                     x = LayerNormalization(center=False, scale=False)(x)
-            decoded_src_i = Dense(output_dim, activation='tanh', use_bias=use_bias)(x)
+            decoded_src_i = Dense(output_dim, activation=output_activation, use_bias=use_bias)(x)
             decoded_srcs.append(decoded_src_i)
         if n_outputs > 1:
             if K.ndim(decoded_srcs[0]) == 2:
                 for i, decoded_src_i in enumerate(decoded_srcs):
-                    decoded_srcs[i] = Reshape(tuple(K.int_shape(decoded_src_i)[1:])+(1,))(decoded_src_i)
+                    decoded_srcs[i] = Reshape(tuple(K.int_shape(decoded_src_i)[1:]) + (1,))(decoded_src_i)
             decoded = Concatenate(axis=-1)(decoded_srcs)
         else:
             decoded = decoded_srcs[0]
@@ -89,8 +89,8 @@ def build_model_1(input_dim, encoding_dim, output_dim, act_c, n_nodes=[8, 4, 2],
         n_layer_dense += 1
     if layer_norm:
         n_layer_dense += 1
-    n_encoder_layer = len(n_nodes)*n_layer_dense+1
-    n_decoder_layer = n_outputs * ((len(n_nodes)-1)*n_layer_dense+1)
+    n_encoder_layer = len(n_nodes) * n_layer_dense + 1
+    n_decoder_layer = n_outputs * ((len(n_nodes) - 1) * n_layer_dense + 1)
     if n_outputs > 1:
         n_decoder_layer += n_outputs  # reshape
         n_decoder_layer += 1  # concat
@@ -160,12 +160,12 @@ def build_model_2(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
 
     # Encoder
     for nf_i in [1, 1, 2, 2, 4, 4, 8, 8, 16, 16, 16, 16]:
-        x = conv1d(x, n_filters*nf_i, 3, 1, padding='same',
+        x = conv1d(x, n_filters * nf_i, 3, 1, padding='same',
                    kernel_initializer='he_normal', batch_norm=batch_norm, act_c=act_c)
         x = MaxPool1D(2, padding='same')(x)
 
     for nf_i in [16]:
-        x = conv1d(x, n_filters*nf_i, 3, 1, padding='valid', use_bias=use_bias,
+        x = conv1d(x, n_filters * nf_i, 3, 1, padding='valid', use_bias=use_bias,
                    kernel_initializer='he_normal', batch_norm=batch_norm, act_c=act_c)
 
     encoded = x
@@ -174,27 +174,27 @@ def build_model_2(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
     def decoder_func(inputs):
         x = inputs
         for nf_i in [16]:
-            x = deconv1d(x, n_filters*nf_i, kernel_size=1, strides=3, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=1, strides=3, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 3
 
         for nf_i in [16, 16]:
-            x = deconv1d(x, n_filters*nf_i, kernel_size=2, strides=2, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=2, strides=2, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)
 
         for nf_i in [16, 16]:
-            x = Conv1D(n_filters*nf_i, kernel_size=2, strides=1, padding='valid',
+            x = Conv1D(n_filters * nf_i, kernel_size=2, strides=1, padding='valid',
                        use_bias=use_bias, activation=act_c)(x)  # 12->11, 22->21
-            x = deconv1d(x, n_filters*nf_i, kernel_size=2, strides=2, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=2, strides=2, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)
 
         for nf_i in [8, 8]:
-            x = deconv1d(x, n_filters*nf_i, kernel_size=2, strides=2, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=2, strides=2, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)
-            x = Conv1D(n_filters*nf_i, kernel_size=2, strides=1, use_bias=use_bias,
+            x = Conv1D(n_filters * nf_i, kernel_size=2, strides=1, use_bias=use_bias,
                        padding='valid', activation=act_c)(x)  # 84->83, 166->165
 
         for nf_i in [4, 4, 2, 2, 1, 1]:
-            x = deconv1d(x, n_filters*nf_i, kernel_size=2, strides=2, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=2, strides=2, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)
 
         x = Conv1D(1, 1, use_bias=use_bias, activation='tanh')(x)
@@ -214,9 +214,9 @@ def build_model_2(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
     if batch_norm:
         n_conv += 1
     if batch_norm:
-        n_encoder_layer = 1 + (n_conv+1)*12 + n_conv  # padding, conv+pool, conv
+        n_encoder_layer = 1 + (n_conv + 1) * 12 + n_conv  # padding, conv+pool, conv
     else:
-        n_encoder_layer = 1 + (n_conv+1)*12 + n_conv  # padding, conv+pool, conv
+        n_encoder_layer = 1 + (n_conv + 1) * 12 + n_conv  # padding, conv+pool, conv
 
     if up_sam_type == 'conv1dtranspose':
         n_deconv = 3  # num of layers of deconv1d
@@ -226,7 +226,7 @@ def build_model_2(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
         n_deconv += 1
     if batch_norm:
         n_deconv += 1
-    n_decoder_layer = n_deconv*3 + (1+n_deconv)*2 + (n_deconv+1)*2 + n_deconv*6 + 2
+    n_decoder_layer = n_deconv * 3 + (1 + n_deconv) * 2 + (n_deconv + 1) * 2 + n_deconv * 6 + 2
 
     return autoencoder, decoder, n_encoder_layer, n_decoder_layer
 
@@ -242,7 +242,7 @@ def build_model_3(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
 
     # Encoder
     def layer_encoder(x, n_filters, nf_i, batch_norm, act_c, use_bias):
-        x = conv1d(x, n_filters*nf_i, 3, 1, padding='same', use_bias=use_bias,
+        x = conv1d(x, n_filters * nf_i, 3, 1, padding='same', use_bias=use_bias,
                    kernel_initializer='he_normal', batch_norm=batch_norm, act_c=act_c)
         x = MaxPool1D(2, padding='same')(x)
         return x
@@ -260,7 +260,7 @@ def build_model_3(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
     x11 = layer_encoder(x10, n_filters, 16, batch_norm, act_c, use_bias)  # 6
     x12 = layer_encoder(x11, n_filters, 16, batch_norm, act_c, use_bias)  # 3
     logging.debug(f'x12 {str(x12)}')
-    x13 = conv1d(x12, n_filters*16, 3, 1, padding='valid', use_bias=use_bias,
+    x13 = conv1d(x12, n_filters * 16, 3, 1, padding='valid', use_bias=use_bias,
                  kernel_initializer='he_normal', batch_norm=batch_norm, act_c=act_c)  # 1
 
     encoded = [x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13]
@@ -268,40 +268,40 @@ def build_model_3(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
 
     def decoder_func(inputs):
         x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13 = inputs
-        d1 = deconv1d(x13, n_filters*16, kernel_size=1, strides=3, use_bias=use_bias,
+        d1 = deconv1d(x13, n_filters * 16, kernel_size=1, strides=3, use_bias=use_bias,
                       dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 3
         logging.debug(f'd1 {d1}')
-        d2 = deconv1d(d1, n_filters*16, skip_input=x12, kernel_size=2, strides=2, use_bias=use_bias,
+        d2 = deconv1d(d1, n_filters * 16, skip_input=x12, kernel_size=2, strides=2, use_bias=use_bias,
                       dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 6
-        d3 = deconv1d(d2, n_filters*16, skip_input=x11, kernel_size=2, strides=2, use_bias=use_bias,
+        d3 = deconv1d(d2, n_filters * 16, skip_input=x11, kernel_size=2, strides=2, use_bias=use_bias,
                       dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 12
-        d4 = Conv1D(n_filters*16, kernel_size=2, strides=1, padding='valid',
+        d4 = Conv1D(n_filters * 16, kernel_size=2, strides=1, padding='valid',
                     use_bias=use_bias, activation=act_c)(d3)  # 12->11
-        d5 = deconv1d(d4, n_filters*16, skip_input=x10, kernel_size=2, strides=2, use_bias=use_bias,
+        d5 = deconv1d(d4, n_filters * 16, skip_input=x10, kernel_size=2, strides=2, use_bias=use_bias,
                       dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 22
-        d6 = Conv1D(n_filters*16, kernel_size=2, strides=1, padding='valid',
+        d6 = Conv1D(n_filters * 16, kernel_size=2, strides=1, padding='valid',
                     use_bias=use_bias, activation=act_c)(d5)  # 22->21
-        d7 = deconv1d(d6, n_filters*16, skip_input=x9, kernel_size=2, strides=2, use_bias=use_bias,
+        d7 = deconv1d(d6, n_filters * 16, skip_input=x9, kernel_size=2, strides=2, use_bias=use_bias,
                       dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 42
-        d8 = deconv1d(d7, n_filters*8, skip_input=x8, kernel_size=2, strides=2, use_bias=use_bias,
+        d8 = deconv1d(d7, n_filters * 8, skip_input=x8, kernel_size=2, strides=2, use_bias=use_bias,
                       dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 84
-        d9 = Conv1D(n_filters*8, kernel_size=2, strides=1, padding='valid',
+        d9 = Conv1D(n_filters * 8, kernel_size=2, strides=1, padding='valid',
                     use_bias=use_bias, activation=act_c)(d8)  # 84->83
-        d10 = deconv1d(d9, n_filters*8, skip_input=x7, kernel_size=2, strides=2, use_bias=use_bias,
+        d10 = deconv1d(d9, n_filters * 8, skip_input=x7, kernel_size=2, strides=2, use_bias=use_bias,
                        dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 166
-        d11 = Conv1D(n_filters*8, kernel_size=2, strides=1, padding='valid',
+        d11 = Conv1D(n_filters * 8, kernel_size=2, strides=1, padding='valid',
                      use_bias=use_bias, activation=act_c)(d10)  # 166->165
-        d12 = deconv1d(d11, n_filters*4, skip_input=x6, kernel_size=2, strides=2, use_bias=use_bias,
+        d12 = deconv1d(d11, n_filters * 4, skip_input=x6, kernel_size=2, strides=2, use_bias=use_bias,
                        dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 330
-        d13 = deconv1d(d12, n_filters*4, skip_input=x5, kernel_size=2, strides=2, use_bias=use_bias,
+        d13 = deconv1d(d12, n_filters * 4, skip_input=x5, kernel_size=2, strides=2, use_bias=use_bias,
                        dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 660
-        d14 = deconv1d(d13, n_filters*2, skip_input=x4, kernel_size=2, strides=2, use_bias=use_bias,
+        d14 = deconv1d(d13, n_filters * 2, skip_input=x4, kernel_size=2, strides=2, use_bias=use_bias,
                        dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 1320
-        d15 = deconv1d(d14, n_filters*2, skip_input=x3, kernel_size=2, strides=2, use_bias=use_bias,
+        d15 = deconv1d(d14, n_filters * 2, skip_input=x3, kernel_size=2, strides=2, use_bias=use_bias,
                        dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 2640
-        d16 = deconv1d(d15, n_filters*1, skip_input=x2, kernel_size=2, strides=2, use_bias=use_bias,
+        d16 = deconv1d(d15, n_filters * 1, skip_input=x2, kernel_size=2, strides=2, use_bias=use_bias,
                        dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 5280
-        d17 = deconv1d(d16, n_filters*1, skip_input=x1, kernel_size=2, strides=2, use_bias=use_bias,
+        d17 = deconv1d(d16, n_filters * 1, skip_input=x1, kernel_size=2, strides=2, use_bias=use_bias,
                        dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 10560
 
         x = Conv1D(1, 1, use_bias=use_bias, activation='tanh')(d17)
@@ -321,7 +321,7 @@ def build_model_3(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
     n_conv = 2
     if batch_norm:
         n_conv += 1
-    n_encoder_layer = 1 + (n_conv+1)*12 + n_conv  # padding, conv+pool, conv
+    n_encoder_layer = 1 + (n_conv + 1) * 12 + n_conv  # padding, conv+pool, conv
 
     if up_sam_type == 'conv1dtranspose':
         n_deconv = 3  # num of layers of deconv1d
@@ -331,7 +331,7 @@ def build_model_3(input_dim, n_pad_input=13, n_filters=16, act_c='relu', use_bia
         n_deconv += 1
     if batch_norm:
         n_deconv += 1
-    n_decoder_layer = n_deconv*13 + 5 + 1  # unti_conv + conv + lambda
+    n_decoder_layer = n_deconv * 13 + 5 + 1  # unti_conv + conv + lambda
 
     return autoencoder, decoder, n_encoder_layer, n_decoder_layer
 
@@ -347,14 +347,14 @@ def build_model_4(input_dim, latent_dim, n_pad_input=13, n_filters=16, act_c='re
 
     # Encoder
     for nf_i in [1, 1, 2, 2, 4, 4, 8, 8, 16, 16, 16, 16]:
-        x = conv1d(x, n_filters*nf_i, 3, 1, padding='same', use_bias=use_bias,
+        x = conv1d(x, n_filters * nf_i, 3, 1, padding='same', use_bias=use_bias,
                    kernel_initializer='he_normal', batch_norm=batch_norm, act_c=act_c)
         x = MaxPool1D(2, padding='same')(x)
 
     for nf_i in [16]:
-        x = conv1d(x, n_filters*nf_i, 3, 1, padding='valid', use_bias=use_bias,
+        x = conv1d(x, n_filters * nf_i, 3, 1, padding='valid', use_bias=use_bias,
                    kernel_initializer='he_normal', batch_norm=batch_norm, act_c=act_c)
-    x = Reshape((n_filters*16, 1))(x)
+    x = Reshape((n_filters * 16, 1))(x)
     encoded = LSTM(latent_dim, use_bias=use_bias, activation=act_r)(x)
 
     def decoder_func(inputs):
@@ -374,7 +374,7 @@ def build_model_4(input_dim, latent_dim, n_pad_input=13, n_filters=16, act_c='re
     n_conv = 2
     if batch_norm:
         n_conv += 1
-    n_encoder_layer = 1 + (n_conv+1)*12 + n_conv + 1 + 1  # padding, conv+pool, conv, reshape, LSTM
+    n_encoder_layer = 1 + (n_conv + 1) * 12 + n_conv + 1 + 1  # padding, conv+pool, conv, reshape, LSTM
     n_decoder_layer = 3  # repeat, LSTM, TimeDistribute
     return autoencoder, decoder, n_encoder_layer, n_decoder_layer
 
@@ -392,14 +392,14 @@ def build_model_5(input_dim, latent_dim, intermediate_dim, n_pad_input=13, n_fil
 
     # Encoder
     for nf_i in [1, 1, 2, 2, 4, 4, 8, 8, 16, 16, 16, 16]:
-        x = conv1d(x, n_filters*nf_i, 3, 1, padding='same', use_bias=use_bias,
+        x = conv1d(x, n_filters * nf_i, 3, 1, padding='same', use_bias=use_bias,
                    kernel_initializer='he_normal', batch_norm=batch_norm, act_c=act_c)
         x = MaxPool1D(2, padding='same')(x)
 
     for nf_i in [16]:
-        x = conv1d(x, n_filters*nf_i, 3, 1, padding='valid', use_bias=use_bias,
+        x = conv1d(x, n_filters * nf_i, 3, 1, padding='valid', use_bias=use_bias,
                    kernel_initializer='he_normal', batch_norm=batch_norm, act_c=act_c)
-    x = Reshape((-1, ))(x)
+    x = Reshape((-1,))(x)
     logging.debug(f'x {x}')
 
     def sampling(para):
@@ -431,27 +431,27 @@ def build_model_5(input_dim, latent_dim, intermediate_dim, n_pad_input=13, n_fil
         logging.debug(f'x {x}')
 
         for nf_i in [16]:
-            x = deconv1d(x, n_filters*nf_i, kernel_size=1, strides=3, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=1, strides=3, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)  # 3
 
         for nf_i in [16, 16]:
-            x = deconv1d(x, n_filters*nf_i, kernel_size=2, strides=2, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=2, strides=2, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)
 
         for nf_i in [16, 16]:
-            x = Conv1D(n_filters*nf_i, kernel_size=2, strides=1, use_bias=use_bias,
+            x = Conv1D(n_filters * nf_i, kernel_size=2, strides=1, use_bias=use_bias,
                        padding='valid', activation=act_c)(x)  # 12->11, 22->21
-            x = deconv1d(x, n_filters*nf_i, kernel_size=2, strides=2, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=2, strides=2, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)
 
         for nf_i in [8, 8]:
-            x = deconv1d(x, n_filters*nf_i, kernel_size=2, strides=2, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=2, strides=2, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)
-            x = Conv1D(n_filters*nf_i, kernel_size=2, strides=1, use_bias=use_bias,
+            x = Conv1D(n_filters * nf_i, kernel_size=2, strides=1, use_bias=use_bias,
                        padding='valid', activation=act_c)(x)  # 84->83, 166->165
 
         for nf_i in [4, 4, 2, 2, 1, 1]:
-            x = deconv1d(x, n_filters*nf_i, kernel_size=2, strides=2, use_bias=use_bias,
+            x = deconv1d(x, n_filters * nf_i, kernel_size=2, strides=2, use_bias=use_bias,
                          dropout_rate=dropout, batch_norm=batch_norm, up_sam_type=up_sam_type)
 
         x = Conv1D(1, 1, use_bias=use_bias, activation='tanh')(x)
@@ -471,7 +471,7 @@ def build_model_5(input_dim, latent_dim, intermediate_dim, n_pad_input=13, n_fil
     n_conv = 2
     if batch_norm:
         n_conv += 1
-    n_encoder_layer = 1 + (n_conv+1)*12 + n_conv + 1 + 3  # padding, conv+pool, conv, reshape, sampling
+    n_encoder_layer = 1 + (n_conv + 1) * 12 + n_conv + 1 + 3  # padding, conv+pool, conv, reshape, sampling
 
     if up_sam_type == 'conv1dtranspose':
         n_deconv = 3  # num of layers of deconv1d
@@ -481,7 +481,7 @@ def build_model_5(input_dim, latent_dim, intermediate_dim, n_pad_input=13, n_fil
         n_deconv += 1
     if batch_norm:
         n_deconv += 1
-    n_decoder_layer = 2 + n_deconv*3 + (1+n_deconv)*2 + (n_deconv+1)*2 + n_deconv*6 + 2
+    n_decoder_layer = 2 + n_deconv * 3 + (1 + n_deconv) * 2 + (n_deconv + 1) * 2 + n_deconv * 6 + 2
     # dense+lambda, deconv, conv+deconv, deconv+conv, deconv, conv+lambda
     return autoencoder, decoder, n_encoder_layer, n_decoder_layer
 
@@ -492,7 +492,7 @@ def build_model_6(input_dim, encoding_dim, latent_dim, intermediate_dim, output_
         Auto-Encoding Variational Bayes https://arxiv.org/abs/1312.6114
     """
 
-    input_frames = Input(shape=(input_dim, ))
+    input_frames = Input(shape=(input_dim,))
     logging.debug(input_frames)
 
     x = input_frames
@@ -524,7 +524,7 @@ def build_model_6(input_dim, encoding_dim, latent_dim, intermediate_dim, output_
         x = Lambda(lambda x: K.expand_dims(x, axis=-2))(x)
         logging.debug(f'x {x}')
 
-        for i in range(len(n_nodes)-1, -1, -1):
+        for i in range(len(n_nodes) - 1, -1, -1):
             x = Dense(int(encoding_dim * n_nodes[i]), use_bias=use_bias, activation=act_c)(x)
         x = Dense(output_dim, use_bias=use_bias, activation='tanh')(x)
         logging.debug(f'x {x}')
@@ -540,7 +540,7 @@ def build_model_6(input_dim, encoding_dim, latent_dim, intermediate_dim, output_
     logging.debug(decoder.summary())
 
     n_encoder_layer = len(n_nodes) + 1 + 3  # dense, dense, sampling
-    n_decoder_layer = 2+len(n_nodes)+2  # dense+lambda, dense, dense+lambda
+    n_decoder_layer = 2 + len(n_nodes) + 2  # dense+lambda, dense, dense+lambda
     return autoencoder, decoder, n_encoder_layer, n_decoder_layer
 
 
@@ -573,9 +573,9 @@ def build_model_7(input_dim, latent_dim, use_bias=True, act_r='tanh'):
 def segment_encoded_signal(x, signal_length_samples, chunk_size, num_filters_in_encoder,
                            chunk_advance, num_full_chunks):
     # logging.debug(f'segmentation in {x}')
-    x1 = Reshape((signal_length_samples//chunk_size, chunk_size, num_filters_in_encoder))(x)
+    x1 = Reshape((signal_length_samples // chunk_size, chunk_size, num_filters_in_encoder))(x)
     x2 = tf.roll(x, shift=-chunk_advance, axis=1)
-    x2 = Reshape((signal_length_samples//chunk_size, chunk_size, num_filters_in_encoder))(x2)
+    x2 = Reshape((signal_length_samples // chunk_size, chunk_size, num_filters_in_encoder))(x2)
     x2 = x2[:, :-1, :, :]  # Discard last segment with invalid data
 
     x_concat = tf.concat([x1, x2], 1)
@@ -621,15 +621,14 @@ def build_model_8(input_dim, n_pad_input, chunk_size, chunk_advance,
         rnn_type (str): type of the RNN layer.
         units_r (int): number of the units in an RNN layer.
         act_r (str): activation function in RNN layer.
-        use_bias (bool): whether use bias in all neurals.
+        use_bias (bool): whether to use bias in all neurons.
         n_outputs (int): number of output srcs.
-        use_mask (bool): whether using masks layers on encoder vector.
         encoder_multiple_out (bool): trick, for module train_separation_one_autoencoder_freeze_decoder.
         batch_size (int, optional): batch size of the samples during training. Default None.
     """
     frame_length = input_dim + n_pad_input
     n_full_chunks = frame_length // chunk_size
-    n_overlapping_chunks = n_full_chunks*2-1
+    n_overlapping_chunks = n_full_chunks * 2 - 1
 
     input_frames = Input(shape=(input_dim, 1))
     logging.debug(f'input {input_frames}')
@@ -645,14 +644,14 @@ def build_model_8(input_dim, n_pad_input, chunk_size, chunk_advance,
                                                 chunk_advance, n_full_chunks))(x)
     logging.debug(f'segmentation out {x}')  # (bs=32, n_chunkds=329, chunk_siz=64, n_filters_conv=64)
     if rnn_type in {'LSTM', 'BLSTM'}:
-        x = Reshape(tuple(K.int_shape(x)[1:-2])+(chunk_size*n_filters_conv,))(x)
+        x = Reshape(tuple(K.int_shape(x)[1:-2]) + (chunk_size * n_filters_conv,))(x)
         logging.debug(f'reshape {x}')  # (bs=32, n_chunkds=329, chunk_size*n_filters_conv=64*64)
 
     def rnn_layer(rnn_type, x):
         if rnn_type == 'LSTM':
             x = LSTM(units_r, activation=act_r, use_bias=use_bias, return_sequences=True)(x)
         if rnn_type == 'BLSTM':
-            x = Bidirectional(LSTM(units_r//2, activation=act_r, use_bias=use_bias, return_sequences=True))(x)
+            x = Bidirectional(LSTM(units_r // 2, activation=act_r, use_bias=use_bias, return_sequences=True))(x)
         elif rnn_type == 'dprnn':
             x = dprnn_block(x, is_last_dprnn=False, num_overlapping_chunks=n_overlapping_chunks, chunk_size=chunk_size,
                             num_filters_in_encoder=n_filters_conv, units_per_lstm=units_r,
@@ -692,7 +691,7 @@ def build_model_8(input_dim, n_pad_input, chunk_size, chunk_advance,
                 x = rnn_layer(rnn_type, x)
             logging.debug(f'rnn out {x}')  # (bs, time_step=329, units_r)
             if rnn_type == 'dprnn':
-                x = Reshape(tuple(K.int_shape(x)[1:-2]+(-1,)))(x)
+                x = Reshape(tuple(K.int_shape(x)[1:-2] + (-1,)))(x)
                 logging.debug(f'rnn out reshape {x}')  # (bs, time_step=329, chunk_size*n_filters_conv=64*64)
 
             x = Dense(units=dim_fc, use_bias=use_bias)(x)
@@ -737,24 +736,25 @@ def build_model_8(input_dim, n_pad_input, chunk_size, chunk_advance,
     elif rnn_type == 'dprnn':
         n_rnn_layer = 18  # when using dprnn_block (function)
     # padding, conv, seg
-    n_encoder_layer = 1 + n_conv_encoder*n_conv_layer + 1
+    n_encoder_layer = 1 + n_conv_encoder * n_conv_layer + 1
     # reshape
     if rnn_type in {'LSTM', 'BLSTM'}:
         n_encoder_layer += 1
     # rnn
-    n_encoder_layer += n_rnn_encoder*n_rnn_layer
+    n_encoder_layer += n_rnn_encoder * n_rnn_layer
 
     # encoder_multiple_out, Trick, only use in separator modules
     if encoder_multiple_out:
         n_encoder_layer += n_outputs
 
     # RNN + (dense+LN+overlapadd+expand_dims)
-    n_decoder_out_layer = n_rnn_decoder*n_rnn_layer+4
+    n_decoder_out_layer = n_rnn_decoder * n_rnn_layer + 4
     # reshape
     if rnn_type == 'dprnn':
         n_decoder_out_layer += 1
 
-    n_decoder_layer = n_outputs*n_decoder_out_layer
+    n_decoder_layer = n_outputs * n_decoder_out_layer
+
     # concat
     if n_outputs > 1:
         n_decoder_layer += 1
@@ -769,7 +769,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
                    n_block_encoder, n_block_decoder, block_type, use_bias,
                    n_outputs, is_multiple_decoder, use_mask=True,
                    units_r=None, act_r=None, use_ln_decoder=False, model_type='separator', encoder_multiple_out=None,
-                   batch_size=None,
+                   batch_size=None, output_activation=None,
                    ):
     """Tasnet or Encoder-Decoder Networks with Dprnn, BLSTM, LSTM.
         LUO Y, CHEN Z, YOSHIOKA T. Dual-Path RNN: Efficient Long Sequence Modeling for Time-Domain Single-Channel Speech Separation[C/OL]
@@ -789,7 +789,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
         n_block_encoder (int): number of the RNN layers in encoder layers.
         n_block_decoder (int): number of the RNN layers in decoder layers.
         block_type (str): type of the RNN layer.
-        use_bias (bool): whether use bias in all neurals.
+        use_bias (bool): whether to use bias in all neurons.
         n_outputs (int): number of output srcs.
         is_multiple_decoder (bool): whether the network is encoder - multiple decoder structure.
         use_mask (bool): whether using masks layers on encoder vector.
@@ -799,6 +799,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
         model_type (str, optional): trick, the model used for separator or autoencoder. Defaults to 'separator'.
         encoder_multiple_out (bool, optional): trick, for module train_separation_one_autoencoder_freeze_decoder. Defaults to False.
         batch_size (int, optional): batch size of the samples during training. Defaults to None.
+        output_activation (str, optional): activation function of output layers. Defaults to None.
     """
     frame_length = input_dim + n_pad_input
     n_full_chunks = frame_length // chunk_size
@@ -834,7 +835,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
             outputs = LSTM(units_r, activation=act_r, use_bias=use_bias, return_sequences=True)(inputs)
         if block_type == 'BLSTM':
             outputs = Bidirectional(LSTM(units_r // 2, activation=act_r,
-                                    use_bias=use_bias, return_sequences=True))(inputs)
+                                         use_bias=use_bias, return_sequences=True))(inputs)
         elif block_type == 'dprnn':
             is_last_block = kwargs['is_last_block'] if 'is_last_block' in kwargs.keys() else False
             n_speakers = kwargs['n_speakers'] if 'n_speakers' in kwargs.keys() else 1
@@ -852,7 +853,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
     logging.debug(f'encoded {encoded}')
 
     # (bs, time_step=329, out_dim=units_r) with LSTM, BLSTM
-    # (bs, time_step=329, chunk_size=64, units_r) with dprnn
+    # (bs, time_step=329, chunk_size=64, n_filters_encoder) with dprnn
 
     def tasnet_decoder(inputs, dim_fc, n_outputs, n_block_decoder, block_type, is_multiple_decoder):
         def slice_tensor(tensor, index_channel):
@@ -916,7 +917,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
                         logging.debug(f'encoded_conv {encoded_conv}')  # (bs, fl=10560, n_filters_encoder)
                         decoded_src_i = Multiply()([encoded_conv, decoded_src_i])
                     logging.debug(f'decoded_src_i {decoded_src_i}')  # (bs, fl=10560, n_filters_encoder)
-                    decoded_src_i = Dense(units=dim_fc, use_bias=use_bias)(decoded_src_i)
+                    decoded_src_i = Dense(units=dim_fc, use_bias=use_bias, activation=output_activation)(decoded_src_i)
                     logging.debug(f'dense out {decoded_src_i}')  # (bs, fl=10560, dim_fc)
                     if use_ln_decoder:
                         decoded_src_i = LayerNormalization(center=False, scale=False)(decoded_src_i)
@@ -942,7 +943,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
                     logging.debug(f'mask_src_i {decoded_src_i}')  # (bs, fl=10560, n_filters_encoder)
                     decoded_src_i = Multiply()([encoded_conv, decoded_src_i])
                 logging.debug(f'decoded_src_i {decoded_src_i}')  # (bs, fl=10560, n_filters_encoder)
-                decoded_src_i = Dense(units=dim_fc, use_bias=use_bias)(decoded_src_i)
+                decoded_src_i = Dense(units=dim_fc, use_bias=use_bias, activation=output_activation)(decoded_src_i)
                 logging.debug(f'dense out {decoded_src_i}')  # (bs, fl=10560, dim_fc)
                 if use_ln_decoder:
                     decoded_src_i = LayerNormalization(center=False, scale=False)(decoded_src_i)
@@ -988,12 +989,12 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
         n_rnn_layer = 18
 
     # padding, conv, seg
-    n_encoder_layer = 1 + n_conv_encoder*n_conv_layer + 1
+    n_encoder_layer = 1 + n_conv_encoder * n_conv_layer + 1
     # reshape
     if block_type in {'LSTM', 'BLSTM'}:
         n_encoder_layer += 1
     # rnn
-    n_encoder_layer += n_block_encoder*n_rnn_layer
+    n_encoder_layer += n_block_encoder * n_rnn_layer
 
     # Trick, only use when model_type == 'ae_sep'
     if model_type == 'ae_sep' and is_multiple_decoder:
@@ -1005,7 +1006,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
         n_encoder_layer += n_outputs
 
     # RNN
-    n_decoder_rnn_layer = n_block_decoder*n_rnn_layer
+    n_decoder_rnn_layer = n_block_decoder * n_rnn_layer
 
     # {dense+reshape} + overlap_add_mask + {reshape}
     n_decoder_mask_layer = 1
@@ -1024,9 +1025,9 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
         n_decoder_out_layer += 1
 
     if is_multiple_decoder:
-        n_decoder_layer = n_outputs*(n_decoder_rnn_layer+n_decoder_mask_layer+n_decoder_out_layer)
+        n_decoder_layer = n_outputs * (n_decoder_rnn_layer + n_decoder_mask_layer + n_decoder_out_layer)
     else:
-        n_decoder_layer = n_decoder_rnn_layer+n_decoder_mask_layer+n_outputs*n_decoder_out_layer
+        n_decoder_layer = n_decoder_rnn_layer + n_decoder_mask_layer + n_outputs * n_decoder_out_layer
 
     # concat
     if n_outputs > 1:
@@ -1042,7 +1043,8 @@ def build_model_14(input_dim, n_pad_input,
                    n_channels_conv, n_channels_bottleneck, n_channels_skip,
                    n_block_encoder, n_block_decoder, n_layer_each_block, kernel_size, causal, norm_type,
                    n_outputs, is_multiple_decoder, use_residual=True, use_skip=True, use_sum_repeats=False,
-                   use_mask=True, act_mask='sigmoid', output_activation=None, model_type='separator', encoder_multiple_out=False,
+                   use_mask=True, act_mask='sigmoid', output_activation=None, model_type='separator',
+                   encoder_multiple_out=False,
                    ):
     # n_filters_encoder     N  = 512    Number of filters in autoencoder
     # kernel_size_encoder   L  =  16    Length of the filters (in samples)
@@ -1072,7 +1074,7 @@ def build_model_14(input_dim, n_pad_input,
     # True/False,        False,    False,      True/False,                True, -> False   no network (add inputs)
     # True/False,        False,    False,      True/False,               False, -> False   no network (add inputs)
     """Tasnet or Encoder-Decoder Networks with TCN (conv-TasNet).
-        LUO Y, MESGARANI N. Conv-tasnet: Surpassing ideal time-frequency magnitude masking for speech separation[J].
+        LUO Y, MESGARANI N. Conv-tasnet: Surpassing ideal time�Cfrequency magnitude masking for speech separation[J].
         IEEE/ACM transactions on audio, speech, and language processing, 2019, 27(8): 1256-1266.
     Args:
         input_dim (int): dim of the input vector.
@@ -1082,7 +1084,7 @@ def build_model_14(input_dim, n_pad_input,
         kernel_size_encoder (int): L.
         strides_encoder (int): strides of the convolutional layers in encoder layers.
         act_c (str): activation function in the convolutional layers in encoder layersr.
-        use_bias (bool): whether use bias in all neurals.
+        use_bias (bool): whether to use bias in all neurons.
         n_channels_conv (int): H.
         n_channels_bottleneck (int): B.
         n_channels_skip (int): Sc.
@@ -1094,8 +1096,8 @@ def build_model_14(input_dim, n_pad_input,
         norm_type (str): type of normolization layers.
         n_outputs (int): number of output srcs.
         is_multiple_decoder (bool): whether the network is encoder - multiple decoder structure.
-        use_residual (bool, optional): whether use a 1x1-conv of residual path in TCN block. Defaults to True.
-        use_skip (bool, optional): whether use a 1x1-conv of skip-connection path in TCN block. Defaults to True.
+        use_residual (bool, optional): whether to use a 1x1-conv of residual path in TCN block. Defaults to True.
+        use_skip (bool, optional): whether to use a 1x1-conv of skip-connection path in TCN block. Defaults to True.
         use_sum_repeats (bool, optional): whether use sums of skip-connection paths and residual path in each repeat. Defaults to False.
         use_mask (bool, optional): whether multiple mask with encoded vector. Defaults to True.
         act_mask (str, optional): type of activation of mask layer. Defaults to 'sigmoid'.
@@ -1151,7 +1153,7 @@ def build_model_14(input_dim, n_pad_input,
                 logging.debug(f'block out {x}')  # (bs, fl, n_channels_conv)
                 x = PReLU(shared_axes=[1])(x)
                 # (bs, fl, n_filters_encoder*n_outputs)
-                x = Conv1D(filters=n_filters_encoder*n_outputs, kernel_size=1)(x)
+                x = Conv1D(filters=n_filters_encoder * n_outputs, kernel_size=1)(x)
                 x = Reshape((frame_length, n_outputs, n_filters_encoder))(x)  # (bs, fl, n_outputs, n_filters_encoder)
                 if norm_type:
                     x = normal_layer(x, norm_type)
@@ -1170,7 +1172,8 @@ def build_model_14(input_dim, n_pad_input,
                         decoded_src_i = Multiply()([encoded_conv, decoded_src_i])
                     logging.debug(f'decoded_src_i {decoded_src_i}')  # (bs, fl=10560, n_filters_encoder)
                     decoded_src_i = conv1d_transpose(decoded_src_i, 1, kernel_size_encoder,
-                                                     strides=strides_encoder, activation=output_activation, padding='same')
+                                                     strides=strides_encoder, activation=output_activation,
+                                                     padding='same')
                     logging.debug(f'decoded_src_i {decoded_src_i}')  # (bs=32, fl=10560, 1)
                     decoded_srcs.append(decoded_src_i)
             elif n_branches == n_outputs:  # One Encoder - Multiple Decoder
@@ -1231,10 +1234,10 @@ def build_model_14(input_dim, n_pad_input,
     # # padding, Conv(encoder), LN, Conv(bottleneck_layer)
     # num_encoder_layer = 1 + n_conv_encoder*num_conv_encoder_layer + 1 + 1
     # Conv(encoder), LN, Conv(bottleneck_layer)
-    num_encoder_layer = n_conv_encoder*num_conv_encoder_layer + 1 + 1
+    num_encoder_layer = n_conv_encoder * num_conv_encoder_layer + 1 + 1
 
-    # conv, PReLU, GLN, ZeroPadding, DepthwiseConv, PReLU, GLN
-    num_block_conv_layer = 7
+    # conv, PReLU, {GLN}, ZeroPadding, DepthwiseConv, PReLU, {GLN}
+    num_block_conv_layer = 7 if norm_type else 5
     if use_skip:
         num_block_conv_layer += 1  # Conv
     if use_residual:
@@ -1263,8 +1266,8 @@ def build_model_14(input_dim, n_pad_input,
     else:
         num_decoder_block_layer += (n_block_decoder - 1)  # Add per block
 
-    # {PReLU, Conv, Reshape, GLN, Permute/Reshape}
-    num_decoder_sep_layer = 5
+    # {PReLU, Conv, Reshape, {GLN}, Permute/Reshape}
+    num_decoder_sep_layer = 5 if norm_type else 4
 
     # Lambda
     num_decoder_mask_layer = 0 if is_multiple_decoder else 1  # slice_tensor
@@ -1286,9 +1289,9 @@ def build_model_14(input_dim, n_pad_input,
             num_decoder_layer += 1  # Concatenate
     else:
         # Block + Sep + {Mask+Decoder} + (Lambda Clip)
-        num_decoder_layer = num_decoder_block_layer\
-            + num_decoder_sep_layer\
-            + n_outputs * (num_decoder_mask_layer + num_decoder_decoder_layer)\
+        num_decoder_layer = num_decoder_block_layer \
+                            + num_decoder_sep_layer \
+                            + n_outputs * (num_decoder_mask_layer + num_decoder_decoder_layer) \
             # + 1
         if n_outputs > 1:
             num_decoder_layer += 1  # Concatenate
@@ -1317,16 +1320,16 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
         num_layers (int, optional): number of layers of U-Net encoder or decoder. Defaults to 12.
         num_initial_filters (int, optional): initial number of filters of convolutional layers. Defaults to 24.
         kernel_size (int, optional): Kernel size in convolutional layers. Defaults to 15.
-        use_bias (bool): whether use bias in all neurals.
+        use_bias (bool): whether to use bias in all neurons.
         merge_filter_size (int, optional): Kernel size in convolutional layers after concat layers. Defaults to 5.
         output_filter_size (int, optional): number of filters of convolutional layers before output layers. Defaults to 1.
         padding (str, optional): padding type of convolutional layers. Defaults to "same".
         context (bool, optional): shape in bilinear interpolation resize layers. Defaults to False.
-        upsampling_type (str, optional): type of upsampling layers. Defaults to "learned".
-        batch_norm (bool, optional): whether using batch normolization layers. Defaults to False.
+        upsampling_type (str, optional): type of up-sampling layers. Defaults to "learned".
+        batch_norm (bool, optional): whether using batch normalization layers. Defaults to False.
         output_activation (str, optional): activation function of output layers. Defaults to "linear".
         output_type (str, optional): type of output layer. Defaults to "difference".
-        use_skip (bool, optional): wether using skip connection layers. Defaults to True.
+        use_skip (bool, optional): whether using skip connection layers. Defaults to True.
         model_type (str, optional): trick, the model used for separator or autoencoder. Defaults to 'separator'.
         encoder_multiple_out (bool, optional): trick, for module train_separation_one_autoencoder_freeze_decoder. Defaults to False.
     """
@@ -1345,20 +1348,20 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
     for i_layer in range(num_layers):
         X = Conv1D(filters=num_initial_filters + (num_initial_filters * i_layer),
                    kernel_size=kernel_size, strides=1, use_bias=use_bias,
-                   padding=padding, name="Down_Conv_"+str(i_layer))(X)
-        X = LeakyReLU(name="Down_Conv_Activ_"+str(i_layer))(X)
+                   padding=padding, name="Down_Conv_" + str(i_layer))(X)
+        X = LeakyReLU(name="Down_Conv_Activ_" + str(i_layer))(X)
         if batch_norm:
-            X = BatchNormalization(name="Down_BN_"+str(i_layer))(X)
+            X = BatchNormalization(name="Down_BN_" + str(i_layer))(X)
         enc_outputs.append(X)
 
-        X = Lambda(lambda x: x[:, ::2, :], name="Decimate_"+str(i_layer))(X)
+        X = Lambda(lambda x: x[:, ::2, :], name="Decimate_" + str(i_layer))(X)
 
     X = Conv1D(filters=num_initial_filters + (num_initial_filters * num_layers),
                kernel_size=kernel_size, strides=1, use_bias=use_bias,
-               padding=padding, name="Down_Conv_"+str(num_layers))(X)
-    X = LeakyReLU(name="Down_Conv_Activ_"+str(num_layers))(X)
+               padding=padding, name="Down_Conv_" + str(num_layers))(X)
+    X = LeakyReLU(name="Down_Conv_Activ_" + str(num_layers))(X)
     if batch_norm:
-        X = BatchNormalization(name="Down_BN_"+str(num_layers))(X)
+        X = BatchNormalization(name="Down_BN_" + str(num_layers))(X)
     encoded = X
     logging.debug(f'encoded {encoded}')
 
@@ -1398,7 +1401,7 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
                 name_crop_concat = f'CropConcat_{i_layer}' if i_branch is None else f'CropConcat_{i_branch}_{i_layer}'
                 X = CropConcatLayer(match_feature_dim=False,
                                     name=name_crop_concat,
-                                    )([enc_outputs[-i_layer-1], X])
+                                    )([enc_outputs[-i_layer - 1], X])
 
             X = Conv1D(filters=num_initial_filters + (num_initial_filters * (num_layers - i_layer - 1)),
                        kernel_size=merge_filter_size, strides=1, use_bias=use_bias,
@@ -1428,14 +1431,15 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
                     for i_outputs in range(n_outputs):
                         decoded_src_i = Conv1D(num_channels, output_filter_size, use_bias=use_bias,
                                                padding=padding, activation=output_activation,
-                                               name="independent_out_"+str(i_outputs))(X)
+                                               name="independent_out_" + str(i_outputs))(X)
                         if output_activation not in {'tanh'}:
                             decoded_src_i = AudioClipLayer()(decoded_src_i)
                         decoded_srcs.append(decoded_src_i)
                 else:  # Difference Output
-                    cropped_input = CropLayer(match_feature_dim=False, name="Crop_layer_"+str(num_layers+1))([inp, X])
+                    cropped_input = CropLayer(match_feature_dim=False, name="Crop_layer_" + str(num_layers + 1))(
+                        [inp, X])
                     sum_source = []
-                    for i_outputs in range(n_outputs-1):
+                    for i_outputs in range(n_outputs - 1):
                         decoded_src_i = Conv1D(num_channels, output_filter_size, padding=padding, use_bias=use_bias,
                                                activation=output_activation)(X)
                         if output_activation not in {'tanh'}:
@@ -1463,7 +1467,7 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
                 decoded_src_i = decoder_block(decoded_src_i, num_layers, use_skip, i_branch=i_branch)
                 decoded_src_i = Conv1D(num_channels, output_filter_size, use_bias=use_bias,
                                        padding=padding, activation=output_activation,
-                                       name="independent_out_"+str(i_branch))(decoded_src_i)
+                                       name="independent_out_" + str(i_branch))(decoded_src_i)
                 if output_activation not in {'tanh'}:
                     decoded_src_i = AudioClipLayer()(decoded_src_i)
                 decoded_srcs.append(decoded_src_i)
@@ -1524,24 +1528,24 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
 
     if is_multiple_decoder:
         # DecoderBlock + Out + Out_clip
-        num_decoder_layer = n_outputs * (num_decoder_block_layer + num_layer_output)\
-            + 1  # Out_clip
+        num_decoder_layer = n_outputs * (num_decoder_block_layer + num_layer_output) \
+                            + 1  # Out_clip
 
         if n_outputs > 1:
             num_decoder_layer += 1  # Concatenate
     else:
         # DecoderBlock + Out + Out_clip
         if output_type == "direct":
-            num_decoder_layer = num_decoder_block_layer\
-                + n_outputs * num_layer_output\
-                + 1  # Out_clip
+            num_decoder_layer = num_decoder_block_layer \
+                                + n_outputs * num_layer_output \
+                                + 1  # Out_clip
         else:  # Difference Output
             # DecoderBlock + Crop_layer + Out + Crop_layer_out, Subtract + Out_clip
-            num_decoder_layer = num_decoder_block_layer\
-                + 1\
-                + (n_outputs-1) * num_layer_output\
-                + 2\
-                + 1  # Out_clip
+            num_decoder_layer = num_decoder_block_layer \
+                                + 1 \
+                                + (n_outputs - 1) * num_layer_output \
+                                + 2 \
+                                + 1  # Out_clip
             if n_outputs > 3:
                 num_decoder_layer += 1  # Add in Difference output
 

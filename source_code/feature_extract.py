@@ -12,7 +12,7 @@ from error import Error, ParameterError
 
 
 def subframe_np(sources, fl, fs, scale=False):  # pylint: disable=invalid-name
-    """Cuting sources to frames using librosa.
+    """Cutting sources to frames using librosa.
     Args:
         sources (list[np.ndarray,shape==(length,)]): [n] n np array wav datas.
         fl (int): frame length to cut.
@@ -33,7 +33,7 @@ def subframe_np(sources, fl, fs, scale=False):  # pylint: disable=invalid-name
 
 
 def feature_extract(feature, **kwargs):
-    """Extrct a feature of wav frame.
+    """Extract a feature of wav frame.
     Args:
         feature (str): keyword of the feature.
     Raises:

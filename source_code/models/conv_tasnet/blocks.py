@@ -3,7 +3,7 @@
 #   https://github.com/helianvine/conv-tasnet/blob/master/model/modules_v2.py
 #   https://github.com/ishine/tf2-ConvTasNet/blob/main/model/algorithm.py
 #   https://github.com/kaparoo/Conv-TasNet-Archive/tree/master/conv_tasnet/layers
-from error import Error, ParameterError
+from ...error import Error, ParameterError
 import sys
 
 import tensorflow

@@ -77,7 +77,6 @@ def samerate_acc_np(y_true, y_pred):
     return same_rate
 
 
-
 def si_snr_stabilizer_np(y_true, y_pred, epsi=1e-8):
     """SI-SNR based on cosine similarity including stabilizer using np.
         rho = abs(y_pred*y_true)/(|y_pred*y_pred|*|y_true*y_true|+epsi)

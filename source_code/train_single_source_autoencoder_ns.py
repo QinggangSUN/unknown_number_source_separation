@@ -37,7 +37,7 @@ else:
 import numpy as np
 
 from error import Error, ParameterError
-from file_operation import list_dirs_start_str, list_files_end_str, mkdir, walk_files_end_str
+from file_operation import list_dirs, list_dirs_start_str, list_files_end_str, mkdir, walk_files_end_str
 from loss_acc_separation import samerate_acc_d2, vae_loss
 from model_functions import part_front_model, part_back_model
 from prepare_data_shipsear_recognition_mix_s0tos3 import data_save_reshape
@@ -76,13 +76,13 @@ def predict_autoencoder(model, z_test, path_save, save_name, mode='batch_process
         model (keras.Model): a keras model, encoder or decoder.
         z_test (np.ndarray(float),shape=(n_sams,1,fl)): model input, data to predict.
         path_save (str): where to save predict outputs.
-        save_name (str]): path and name of the output file.
+        save_name (str): path and name of the output file.
         mode (str, optional): {'batch_process', 'batch_save'}, way to predict and save data.
                              Defaults to 'batch_process'.
         bs_pred (int, optional): batch size when predict model. Defaults to 32.
-        compile_model (bool, optional): wether compile model before predict,
-                                        use when load an unconpiled model. Defaults to False.
-        reshape_save (bool, optional): wether reshape data when save data. Defaults to False.
+        compile_model (bool, optional): whether compile model before predict,
+                                        use when load an uncompiled model. Defaults to False.
+        reshape_save (bool, optional): whether reshape data when save data. Defaults to False.
     """
     if compile_model:
         optimizer = optimizers.Adam(lr=1e-3)
@@ -180,7 +180,7 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
         fname_model_load (str, optional): file name of model to load. Defaults to None.
     """
     if fname_model_load is None:
-        # give a new moel for the first time training
+        # give a new model for the first time training
         model = autoencoder
         if 'optimizer' in paras.keys():
             optimizer = paras['optimizer']
@@ -192,7 +192,7 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
             elif optimizer_type == 'sgd':
                 optimizer = optimizers.SGD(lr=learn_rate, decay=1e-6, momentum=0.9, nesterov=True)
     else:
-        # laod a pre-trained model and continue train
+        # load a pre-trained model and continue train
         if dict_model_load is None:
             model = load_model(fname_model_load)
         else:
@@ -374,9 +374,7 @@ def save_encoder_decoder(n_encoder_layer, decoder=None, path_save_model=None,
         logging.debug(f'num decoder layer {len(decoder.layers[1:])}')
         for i, layer in enumerate(auto_model.layers[n_encoder_layer+1:]):
             layer_weights = layer.get_weights()
-            # logging.debug(f'auto_weights {layer_weights}')
             decoder.layers[i+1].set_weights(layer_weights)
-            # logging.debug(f'decoder_weights {decoder.layers[i+1].get_weights()}')
     logging.debug(decoder.summary())
     decoder.save(decoder_model_name)
     save_model_struct(decoder, path_save_model, 'decoder_model_struct')
@@ -620,7 +618,6 @@ def test_weight_ae(data_dict, n_encoder_layer, path_save=None, paras=None, dict_
                              weight_file_name=os.path.join(path_save_model, weight_file_name))
 
 
-
 def clear_model_weight_file(path_model_dir, pos_epoch=-2):
     """Clear model files with weights, saved the last model.
     Args:
@@ -638,12 +635,10 @@ def clear_model_weight_file(path_model_dir, pos_epoch=-2):
             f_name_i = os.path.basename(path_model_weights[i])[:-len('.hdf5')]
             index_epoch_i = int(f_name_i.split('_')[pos_epoch])
             if index_epoch_i > index_max_epoch:
-                # logging.debug(f'remove {path_max_epoch}')
                 os.remove(path_max_epoch)
                 index_max_epoch = index_epoch_i
                 path_max_epoch = path_model_weights[i]
             else:
-                # logging.debug(f'remove {path_model_weights[i]}')
                 os.remove(path_model_weights[i])
 
     path_model_weights = walk_files_end_str(path_model_dir, '.hdf5')
@@ -653,7 +648,8 @@ def clear_model_weight_files(path, model_dirname='auto_model', pos_epoch=-2):
     """Clear model files with weights, saved the last model.
     Args:
         path (str): Root path, where save models.
-        model_dirname (str, optional): sub dir name of directories. Defaults to 'auto_model'.        	 pos_epoch (int, optional): Where the keyword placed in string between '_'. Defaults to -2.
+        model_dirname (str, optional): sub dir name of directories. Defaults to 'auto_model'.
+        pos_epoch (int, optional): Where the keyword placed in string between '_'. Defaults to -2.
     """
     path_models = list_dirs_start_str(path, 'model_')
     for path_model in path_models:
@@ -783,6 +779,7 @@ class BuildModel(object):
             use_bias = self.use_bias
             n_nodes = kwargs['n_nodes'] if 'n_nodes' in kwargs.keys() else [8, 4, 2]
             batch_norm = kwargs['batch_norm'] if 'batch_norm' in kwargs.keys() else False
+            output_activation = kwargs['output_activation'] if 'output_activation' in kwargs.keys() else None
             autoencoder, decoder, n_encoder_layer, n_decoder_layer = build_model_1(
                 input_dim=input_dim, encoding_dim=encoding_dim, output_dim=input_dim, act_c=act_c,
                 n_nodes=n_nodes, batch_norm=batch_norm, n_outputs=n_outputs, use_bias=use_bias)
@@ -918,6 +915,7 @@ class BuildModel(object):
             model_type = kwargs['model_type'] if 'model_type' in kwargs.keys() else 'separator'
             encoder_multiple_out = kwargs['encoder_multiple_out'] if 'encoder_multiple_out' in kwargs.keys() else False
             batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else None
+            output_activation = kwargs['output_activation'] if 'output_activation' in kwargs.keys() else None
             autoencoder, decoder, n_encoder_layer, n_decoder_layer = build_model_10(
                 input_dim, n_pad_input, chunk_size, chunk_advance,
                 n_conv_encoder, n_filters_conv, kernel_size, strides, batch_norm, act_c,
@@ -925,6 +923,7 @@ class BuildModel(object):
                 use_mask=use_mask,
                 units_r=latent_dim, act_r=act_r, use_ln_decoder=use_ln_decoder,
                 model_type=model_type, encoder_multiple_out=encoder_multiple_out, batch_size=batch_size,
+                output_activation=output_activation,
             )
         elif num_model in (14, 15, 16, 17, 18, 19):
             # conv-TasNet (TCN)
@@ -1085,7 +1084,7 @@ def search_model(path_result, model_name, input_dim, x_dict, z_dict, z_set_name,
     if bool_clean_weight_file:
         model_dirname = kwargs['model_dirname'] if 'model_dirname' in kwargs.keys() else 'auto_model'
         pos_epoch = kwargs['pos_epoch'] if 'pos_epoch' in kwargs.keys() else -2
-        clear_model_weight_file(os.path.join(path_save, model_dirname), pos_epoch)
+        clear_model_weight_files(os.path.join(path_save, model_dirname), pos_epoch)
     bool_test_weight = kwargs['bool_test_weight'] if 'bool_test_weight' in kwargs.keys() else True
     if bool_test_weight:
         bool_test_ae_w = kwargs['bool_test_ae_w'] if 'bool_test_ae_w' in kwargs.keys() else False
@@ -1181,15 +1180,17 @@ if __name__ == '__main__':
     SESS = tf.Session(graph=tf.get_default_graph(), config=SESSION_CONF)
     K.set_session(SESS)
 
-    # for shipsear data
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
     # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
     # SUB_SET_WAY = 'order'
-
-    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
+    # SPLIT_WAY = None
+    SPLIT_WAY = 'split'
+    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav',
+                                   scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY, split_way=SPLIT_WAY)
+    PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
 
     SET_NAMES = ['train', 'val', 'test']
@@ -1256,63 +1257,7 @@ if __name__ == '__main__':
             #                  'bool_save_ed': True, 'bool_test_ed': True,
             #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
 
-            # search_model(PATH_RESULT, 'model_8_1_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 1, 'n_filters': 64,
-            #                  'rnn_type': 'LSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
-            #                  'bool_train': True, 'bool_test_ae': True,
-            #                  'bool_save_ed': True, 'bool_test_ed': True,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
-
-            # search_model(PATH_RESULT, 'model_8_2_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 1, 'n_filters': 64,
-            #                  'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
-            #                  'bool_train': True, 'bool_test_ae': True,
-            #                  'bool_save_ed': True, 'bool_test_ed': True,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
-
-            # search_model(PATH_RESULT, 'model_8_2_2', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 1, 'n_filters': 64,
-            #                  'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 2,
-            #                  'bool_train': True, 'bool_test_ae': True,
-            #                  'bool_save_ed': True, 'bool_test_ed': True,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
-
-            # search_model(PATH_RESULT, 'model_8_3_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 1, 'n_filters': 64,
-            #                  'rnn_type': 'dprnn', 'latent_dim': 256, 'n_rnn_decoder': 1,
-            #                  'bool_train': True, 'bool_test_ae': True,
-            #                  'bool_save_ed': True, 'bool_test_ed': True,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
-
-            # search_model(PATH_RESULT, 'model_8_4_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 1, 'n_filters': 64, 'use_bias': False,
-            #                  'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
-            #                  'bool_train': True, 'bool_test_ae': True,
-            #                  'bool_save_ed': True, 'bool_test_ed': True,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
-
-            # search_model(PATH_RESULT, 'model_8_5_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 8, 'n_filters': 64, 'use_bias': False,
-            #                  'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1,
-            #                  'bool_train': True, 'bool_test_ae': True,
-            #                  'bool_save_ed': True, 'bool_test_ed': True,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
-
-            # search_model(PATH_RESULT, 'model_8_5_4', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-            #              **{'i': lr_i, 'j': lr_j, 'epochs': 50, 'batch_size': 8, 'bs_pred': 8,
-            #                  'n_conv_encoder': 8, 'n_filters': 64, 'use_bias': False,
-            #                  'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 4,
-            #                  'bool_train': True, 'bool_test_ae': True,
-            #                  'bool_save_ed': True, 'bool_test_ed': True,
-            #                  'bool_clean_weight_file': True, 'bool_test_weight': True})
-
-            # model_13 multiple decoder RNN TasNet without mask
+            # Multiple-Decoder RNN TasNet without mask
             search_model(PATH_RESULT, 'model_13_2_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
                          **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
                              'n_conv_encoder': 1, 'n_filters_conv': 64,
@@ -1324,7 +1269,7 @@ if __name__ == '__main__':
                              'bool_clean_weight_file': True, 'bool_test_weight': True})
 
             search_model(PATH_RESULT, 'model_13_3_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
-                         **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                         **{'i': lr_i, 'j': lr_j, 'epochs': 200, 'batch_size': 8, 'bs_pred': 8,
                              'n_conv_encoder': 1, 'n_filters_conv': 64,
                              'block_type': 'dprnn', 'latent_dim': 200,
                              'n_block_encoder': 1, 'n_block_decoder': 1,
@@ -1333,13 +1278,13 @@ if __name__ == '__main__':
                              'bool_save_ed': True, 'bool_test_ed': True,
                              'bool_clean_weight_file': True, 'bool_test_weight': True})
 
-            # Multiple-Decoder Conv-Tasnet without mask
+            # Multiple-Decoder Conv-TasNet without mask
             search_model(PATH_RESULT, 'model_15_2_6', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
                          **{'i': lr_i, 'j': lr_j, 'epochs': 200, 'batch_size': 6, 'bs_pred': 6,
                             'n_conv_encoder': 1, 'n_filters_encoder': 64,
                             'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
                             'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
-                            # 'output_activation': 'tanh',
+                            'output_activation': 'tanh',
                             'model_type': 'ae', 'is_multiple_decoder': True, 'use_mask': False, 'n_outputs': 1,
                             'bool_train': True, 'bool_test_ae': True,
                             'bool_save_ed': True, 'bool_test_ed': True,

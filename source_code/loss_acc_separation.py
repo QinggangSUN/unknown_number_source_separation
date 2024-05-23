@@ -26,7 +26,7 @@ np.random.seed(1337)  # for reproducibility
 
 
 def samerate_loss(y_true, y_pred, delta=1e-10):
-    """Samerate (cosine similarity) keras loss fuction using Tensorflow."""
+    """Samerate (cosine similarity) keras loss function using Tensorflow."""
     y_true, y_pred = tf.transpose(
         y_true, [0, 3, 2, 1]), tf.transpose(y_pred, [0, 3, 2, 1])
 
@@ -53,7 +53,7 @@ def samerate_loss(y_true, y_pred, delta=1e-10):
 
 
 def samerate_acc(y_true, y_pred, delta=1e-10):
-    """Samerate (cosine similarity) keras accuracy fuction using Tensorflow."""
+    """Samerate (cosine similarity) keras accuracy function using Tensorflow."""
     y_true, y_pred = tf.transpose(
         y_true, [0, 3, 2, 1]), tf.transpose(y_pred, [0, 3, 2, 1])
 
@@ -80,7 +80,7 @@ def samerate_acc(y_true, y_pred, delta=1e-10):
 
 
 def samerate_acc_d2_clip(y_true, y_pred, delta=1e-10):
-    """Samerate (cosine similarity) keras accuracy fuction using Tensorflow."""
+    """Samerate (cosine similarity) keras accuracy function using Tensorflow."""
 
     dn = y_pred.get_shape()[-1].value     # pylint: disable=invalid-name
     y_true = tf.reshape(y_true, [-1, dn])
@@ -124,7 +124,7 @@ def samerate_acc_d2(y_true, y_pred, delta=1e-8, n_output=4):
 
 
 def samerate_loss2(y_true, y_pred):
-    """Samerate (cosine similarity) keras loss fuction using Tensorflow."""
+    """Samerate (cosine similarity) keras loss function using Tensorflow."""
     y_true, y_pred = tf.transpose(
         y_true, [0, 3, 2, 1]), tf.transpose(y_pred, [0, 3, 2, 1])
 

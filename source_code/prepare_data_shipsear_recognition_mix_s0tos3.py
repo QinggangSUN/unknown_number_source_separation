@@ -24,9 +24,8 @@ from feature_extract import feature_extract
 
 _SR = 52734
 _IS_MONO = True
-_FRAME_LENGTH = 10547    # ~200ms 10546.800 000 000 001
+_FRAME_LENGTH = 10547  # ~200ms 10546.800 000 000 001
 _FRAME_SHIFT = 10547
-# _FRAME_SHIFT = 2636     # 10547/4 = 2636.7
 
 
 def get_sr():
@@ -50,15 +49,8 @@ def get_fs():
 
 
 # output mix features
-# _WIN_LENGTH = _FRAME_LENGTH
-# _HOP_LENGTH = _FRAME_LENGTH
-# _HOP_LENGTH = 2636
-_WIN_LENGTH = 1582     # 52734*0.03 = 1582.02
-_HOP_LENGTH = 396      # 52734*0.03/4 = 395.505
-# _WIN_LENGTH = 1055     # 52734*0.02 = 1054.68
-# _HOP_LENGTH = 264      # 52734*0.02/4 = 263.67
-# _WIN_LENGTH = 4
-# _HOP_LENGTH = 1
+_WIN_LENGTH = 1582  # 52734*0.03 = 1582.02
+_HOP_LENGTH = 396  # 52734*0.03/4 = 395.505
 
 
 def get_win_length():
@@ -76,6 +68,7 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, path_root, **kwargs):
         self._path_root = path_root
+        self._split_way = None
 
         for key, value in kwargs.items():
             if key == 'path_seg_root':
@@ -94,6 +87,8 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
                 self._form_src = value
             elif key == 'sub_set_way':
                 self.sub_set_way = value
+            elif key == 'split_way':
+                self._split_way = value
             elif key == 'scaler_data':
                 self._scaler_data = value
             elif key == 'path_source':
@@ -264,7 +259,7 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
             self._path_source_root = os.path.join(
                 self._get_path_mix_root(), f'demon_{int(self._high)}_{int(self._low)}_{int(self._cutoff)}')
         else:
-            raise ParameterError('form_src invaild')
+            raise ParameterError('form_src invalid')
 
     def _get_path_source_root(self):
         """Indirect accessor for 'path_source_root' property."""
@@ -325,7 +320,7 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
         """Get _hop_length."""
         return self._hop_length
 
-    def _set_path_source(self, value, form_src, scaler_data, sub_set_way):
+    def _set_path_source(self, value, form_src, scaler_data, sub_set_way, split_way=None):
         """Calculate the 'path_source' property."""
         if value:
             self._path_source = value
@@ -346,19 +341,27 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
             raise ParameterError(
                 'Has to create sub_set_way by __init__ or _set_path_source')
 
+        if split_way:
+            self._split_way = split_way
+
         if self._scaler_data == 'mm':
-            self._path_source = os.path.join(self._path_source_root, f'min_max_scaler_{self.sub_set_way}')
+            file_name = f'min_max_scaler_{self.sub_set_way}'
         elif self._scaler_data == 'or':
-            self._path_source = os.path.join(self._path_source_root, f'original_{self.sub_set_way}')
+            file_name = f'original_{self.sub_set_way}'
         elif self._scaler_data == 'max_one':
-            self._path_source = os.path.join(self._path_source_root, f'max_one_{self.sub_set_way}')
+            file_name = f'max_one_{self.sub_set_way}'
         else:
-            raise ParameterError('scaler_data invaild')
+            raise ParameterError('scaler_data invalid')
+
+        if self._split_way:
+            file_name = f'{file_name}_{self._split_way}'
+
+        self._path_source = os.path.join(self._path_source_root, file_name)
 
     def _get_path_source(self):
         """Indirect accessor for 'path_source' property."""
         if not hasattr(self, '_path_source'):
-            self._set_path_source(None, None, None, None)
+            self._set_path_source(None, None, None, None, None)
         return self._path_source
 
     def get_path_source(self):
@@ -375,6 +378,11 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
                 frame_length=100, frame_shift=50)
                 >>> print(PATH_CLASS.path_source)
                 ./100_50/s0tos3/mix_1to3/wavmat/original_rand
+            example:
+                >>> PATH_CLASS = PathSourceRoot(
+                '.', form_src='wav', scaler_data='or', sub_set_way='rand', split_way='split')
+                >>> print(PATH_CLASS.path_source)
+                ./10547_10547/s0tos3/mix_1to3/wavmat/original_rand_split
         """
         return self._get_path_source()
 
@@ -411,11 +419,11 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
                 ./root/10547_10547/s0tos3/mix_1to3/wavmat/original_order
         """
         try:
-            value, form_src, scaler_data, sub_set_way = args
+            value, form_src, scaler_data, sub_set_way, split_way = args
         except ValueError:
-            raise ParameterError("Pass an iterable with four items")
+            raise ParameterError("Pass an iterable with five items")
         else:
-            self._set_path_source(value, form_src, scaler_data, sub_set_way)
+            self._set_path_source(value, form_src, scaler_data, sub_set_way, split_way)
 
     path_source = property(get_path_source, set_path_source)
 
@@ -426,6 +434,10 @@ class PathSourceRoot(object):  # pylint: disable=too-many-instance-attributes
     def get_form_src(self):
         """Get read-only _form_src."""
         return self._form_src
+
+    def get_split_way(self):
+        """Get read-only _form_src."""
+        return self._split_way
 
 
 def read_source(path, file_names, form_src='hdf5', data_type=None):
@@ -449,9 +461,9 @@ def read_source(path, file_names, form_src='hdf5', data_type=None):
         logging_debug = False
         file_names_small = []
         for name_i in file_names:
-            if name_i.endswith('.'+file_type):
+            if name_i.endswith('.' + file_type):
                 logging_debug = True
-                file_names_small.append(name_i[:-len('.'+file_type)])
+                file_names_small.append(name_i[:-len('.' + file_type)])
             else:
                 file_names_small.append(name_i)
         if logging_debug:
@@ -469,7 +481,7 @@ def read_source(path, file_names, form_src='hdf5', data_type=None):
             data_type = np.float32
         source_frames = [np.fromfile(
             os.path.join(path, f'{name_i.rstrip()}.{form_src}'), dtype=data_type).reshape(
-                np.load(os.path.join(path, f'{name_i.rstrip()}_shape.npy'))) for name_i in file_names]
+            np.load(os.path.join(path, f'{name_i.rstrip()}_shape.npy'))) for name_i in file_names]
     elif form_src == 'mat':
         if data_type:
             logging.warning('ignore data_type')
@@ -516,9 +528,9 @@ def read_data(path, file_name, form_src='hdf5', dict_key='data', data_type=None,
         Returns:
             file_names_small (list[str]): list of file names without extension.
         """
-        if file_name.endswith('.'+file_type):
+        if file_name.endswith('.' + file_type):
             logging.debug('Remove file names extension.')
-            file_name_small = file_name[:-len('.'+file_type)]
+            file_name_small = file_name[:-len('.' + file_type)]
         else:
             file_name_small = file_name
         return file_name_small
@@ -543,7 +555,7 @@ def read_data(path, file_name, form_src='hdf5', dict_key='data', data_type=None,
             data_type = np.float32
         data = np.fromfile(
             os.path.join(path, f'{file_name.rstrip()}.{form_src}'), dtype=data_type).reshape(
-                np.load(os.path.join(path, f'{file_name.rstrip()}_shape.npy')))
+            np.load(os.path.join(path, f'{file_name.rstrip()}_shape.npy')))
     elif form_src == 'mat':
         if data_type:
             logging.warning('ignore data_type')
@@ -590,9 +602,9 @@ def data_save_reshape(data):
     index_not_one = [index for (index, value) in enumerate(data.shape) if value != 1]
     if index_not_one:
         last_one = index_not_one[-1]
-        if last_one != data.ndim-1:
+        if last_one != data.ndim - 1:
             data = data.transpose(
-                tuple(range(last_one))+tuple(range(last_one+1, data.ndim))+(last_one, ))
+                tuple(range(last_one)) + tuple(range(last_one + 1, data.ndim)) + (last_one,))
     return data
 
 
@@ -601,16 +613,16 @@ def compute_chunk_size(data, chunk_type, dims=None):
     Args:
         data (np.ndarray): data to save.
         chunk_type (str): chunk size selected.
-        dims (int): number of indexes.
+        dims (int/list[int]): number of indexes.
     Returns:
         chunk_size (tuple(int)): chunk size to save.
     """
     if chunk_type == 'back_dim':
-        chunk_size = (1,)+tuple(data[0].shape)
+        chunk_size = (1,) + tuple(data[0].shape)
     elif chunk_type == 'last_dim':
-        chunk_size = (data.ndim-1)*(1,)+data.shape[-1:]
+        chunk_size = (data.ndim - 1) * (1,) + data.shape[-1:]
     elif chunk_type == 'back_n':
-        chunk_size = dims*(1,)+data.shape[dims:]
+        chunk_size = dims * (1,) + data.shape[dims:]
     elif chunk_type == 'some_dim':
         chunk_size = list(data.shape)
         for dim_i in dims:
@@ -674,7 +686,7 @@ def save_datas(set_dict, path_save, **kwargs):
                 with h5py.File(os.path.join(path_save, f'{name_i}.hdf5'), 'a') as f_a:
                     d_f = f_a.create_dataset(name_i,
                                              shape=tuple(data_i.shape),
-                                             dtype=h5py.string_dtype(encoding='utf-8', length=None),)
+                                             dtype=h5py.string_dtype(encoding='utf-8', length=None), )
                     for j, str_j in enumerate(data_i):
                         d_f[j] = str_j
             return
@@ -695,7 +707,7 @@ def save_datas(set_dict, path_save, **kwargs):
                     if save_key not in f_a.root:
                         data_earray = f_a.create_earray(f_a.root, save_key,
                                                         atom=tables.Atom.from_dtype(dtype),
-                                                        shape=((0,)+data_i.shape[1:]),
+                                                        shape=((0,) + data_i.shape[1:]),
                                                         chunkshape=chunk_size_i,
                                                         filters=filters)
                     else:
@@ -708,20 +720,20 @@ def save_datas(set_dict, path_save, **kwargs):
                 dim_0_i = len(data_i) if isinstance(data_i, (list, tuple)) else data_i.shape[0]
                 if batch_num < dim_0_i:
                     for j in range(0, dim_0_i, batch_num):
-                        if j+batch_num > dim_0_i:
+                        if j + batch_num > dim_0_i:
                             data_j = np.asarray(data_i[j:], dtype=dtype)
                         else:
-                            data_j = np.asarray(data_i[j:j+batch_num], dtype=dtype)
+                            data_j = np.asarray(data_i[j:j + batch_num], dtype=dtype)
                         if j == 0:
                             with h5py.File(file_name_i, 'w') as f_w:
                                 f_w.create_dataset(
                                     save_key, data=data_j, dtype=dtype,
                                     chunks=chunk_size_i,
-                                    maxshape=((None,)+data_j.shape[1:]),
+                                    maxshape=((None,) + data_j.shape[1:]),
                                     compression="gzip", compression_opts=9)
                         else:
                             with h5py.File(file_name_i, 'a') as f_a:
-                                f_a[save_key].resize((f_a[save_key].shape[0]+data_j.shape[0]), axis=0)
+                                f_a[save_key].resize((f_a[save_key].shape[0] + data_j.shape[0]), axis=0)
                                 f_a[save_key][-data_j.shape[0]:] = data_j
                 else:
                     with h5py.File(file_name_i, 'w') as f_w:
@@ -766,6 +778,140 @@ def save_datas(set_dict, path_save, **kwargs):
         raise ParameterError('Invalid form_save keyword.')
 
 
+def save_datas_continue(set_dict, path_save, **kwargs):
+    """Save data dict set_dict[key] to [path_save] using file name [key].
+        Warning, different with 'save_datas', this function will reshape exist files instead of create new files.
+    Args:
+        set_dict (dict{str:np.ndarray}): dictionary of datas to be saved, key is the file name.
+        path_save (str): path to save files.
+    Raises:
+        ParameterError: Invalid kwargs keyword.
+        ParameterError: Invalid mode_batch keyword.
+        ParameterError: Invalid form_save keyword.
+    """
+    import h5py
+    import numpy as np
+    import os
+    import tables
+
+    form_save = 'hdf5'
+    dtype = np.dtype('float32')
+    mode_batch = 'normal'
+    save_key = 'data'
+    chunk_type = 'back_dim'
+
+    for key, value in kwargs.items():
+        if key == 'form_save':
+            form_save = value
+        elif key == 'dtype':
+            dtype = value
+        elif key == 'mode_batch':
+            mode_batch = value
+        elif key == 'batch_num':
+            batch_num = value
+        elif key == 'save_key':
+            save_key = value
+        elif key == 'chunk_type':
+            chunk_type = value
+        else:
+            raise ParameterError('Invalid kwargs keyword.')
+
+    if form_save == 'hdf5':
+        if dtype == 'str':  # 1D str list
+            for name_i, data_i in set_dict.items():
+                file_name_i = os.path.join(path_save, f'{name_i}.hdf5')
+                if not os.path.isfile(file_name_i):
+                    with h5py.File(file_name_i, 'w') as f_w:
+                        d_f = f_w.create_dataset(name_i,
+                                                 shape=tuple(data_i.shape),
+                                                 dtype=h5py.string_dtype(encoding='utf-8', length=None), )
+                        for j, str_j in enumerate(data_i):
+                            d_f[j] = str_j
+                else:
+                    with h5py.File(file_name_i, 'a') as f_a:
+                        f_a[name_i].resize((f_a[name_i].shape[0] + data_i.shape[0]), axis=0)
+                        for j, str_j in enumerate(data_i):
+                            f_a[name_i][-data_i.shape[0] + j] = str_j
+            return
+        if mode_batch == 'pytables':
+            filters = tables.Filters(complevel=9, complib='blosc')
+            for name_i, data_i in set_dict.items():
+                file_name_i = os.path.join(path_save, f'{name_i}.hdf5')
+                chunk_size_i = compute_chunk_size(data_i, chunk_type)
+                with tables.open_file(file_name_i, 'a') as f_a:
+                    if save_key not in f_a.root:
+                        data_earray = f_a.create_earray(f_a.root, save_key,
+                                                        atom=tables.Atom.from_dtype(dtype),
+                                                        shape=((0,) + data_i.shape[1:]),
+                                                        chunkshape=chunk_size_i,
+                                                        filters=filters)
+                    else:
+                        data_earray = getattr(f_a.root, save_key)
+                data_earray.append(data_i)
+        if mode_batch == 'batch_pytables':
+            filters = tables.Filters(complevel=9, complib='blosc')
+            for name_i, data_i in set_dict.items():
+                file_name_i = os.path.join(path_save, f'{name_i}.hdf5')
+                chunk_size_i = compute_chunk_size(data_i, chunk_type)
+                dim_0_i = len(data_i) if isinstance(data_i, (list, tuple)) else data_i.shape[0]
+                with tables.open_file(file_name_i, 'a') as f_a:
+                    if save_key not in f_a.root:
+                        data_earray = f_a.create_earray(f_a.root, save_key,
+                                                        atom=tables.Atom.from_dtype(dtype),
+                                                        shape=((0,) + data_i.shape[1:]),
+                                                        chunkshape=chunk_size_i,
+                                                        filters=filters)
+                    else:
+                        data_earray = getattr(f_a.root, save_key)
+                    if batch_num < dim_0_i:
+                        for j in range(0, dim_0_i, batch_num):
+                            if j + batch_num > dim_0_i:
+                                data_j = np.asarray(data_i[j:], dtype=dtype)
+                            else:
+                                data_j = np.asarray(data_i[j:j + batch_num], dtype=dtype)
+                            data_earray.append(data_j)
+                    else:
+                        data_earray.append(data_i)
+        elif mode_batch == 'batch_h5py':
+            for name_i, data_i in set_dict.items():
+                file_name_i = os.path.join(path_save, f'{name_i}.hdf5')
+                chunk_size_i = compute_chunk_size(data_i, chunk_type)
+                dim_0_i = len(data_i) if isinstance(data_i, (list, tuple)) else data_i.shape[0]
+                if batch_num < dim_0_i:
+                    for j in range(0, dim_0_i, batch_num):
+                        if j + batch_num > dim_0_i:
+                            data_j = np.asarray(data_i[j:], dtype=dtype)
+                        else:
+                            data_j = np.asarray(data_i[j:j + batch_num], dtype=dtype)
+                        if j == 0 and not os.path.isfile(file_name_i):
+                            with h5py.File(file_name_i, 'w') as f_w:
+                                f_w.create_dataset(
+                                    save_key, data=data_j, dtype=dtype,
+                                    chunks=chunk_size_i,
+                                    maxshape=((None,) + data_j.shape[1:]),
+                                    compression="gzip", compression_opts=9)
+                        else:
+                            with h5py.File(file_name_i, 'a') as f_a:
+                                f_a[save_key].resize((f_a[save_key].shape[0] + data_j.shape[0]), axis=0)
+                                f_a[save_key][-data_j.shape[0]:] = data_j
+                else:
+                    if os.path.isfile(file_name_i):
+                        with h5py.File(file_name_i, 'a') as f_a:
+                            f_a[save_key].resize((f_a[save_key].shape[0] + data_i.shape[0]), axis=0)
+                            f_a[save_key][-data_i.shape[0]:] = data_i
+                    else:
+                        with h5py.File(file_name_i, 'w') as f_w:
+                            f_w.create_dataset(
+                                save_key, data=data_i, dtype=dtype,
+                                chunks=chunk_size_i,
+                                maxshape=((None,) + data_i.shape[1:]),
+                                compression="gzip", compression_opts=9)
+        else:
+            raise ParameterError('Invalid mode_batch keyword.')
+    else:
+        raise ParameterError('Invalid form_save keyword.')
+
+
 def save_process_batch(data, func, path_save, file_name, batch_num=200, save_key='data', mode_batch='batch',
                        chunk_type='back_dim', *args, **kwargs):
     """Process data by batch through func, save to path_save.
@@ -791,10 +937,10 @@ def save_process_batch(data, func, path_save, file_name, batch_num=200, save_key
         dtype = np.dtype('float32')
 
     for j in range(0, data.shape[0], batch_num):
-        if j+batch_num > data.shape[0]:
+        if j + batch_num > data.shape[0]:
             data_j = data[j:]
         else:
-            data_j = data[j:j+batch_num]
+            data_j = data[j:j + batch_num]
 
         data_result = func(data_j, *args, **kwargs)
         chunk_size = compute_chunk_size(data_result, chunk_type)
@@ -804,7 +950,7 @@ def save_process_batch(data, func, path_save, file_name, batch_num=200, save_key
                 if save_key not in f_w.root:
                     data_earray = f_w.create_earray(f_w.root, save_key,
                                                     atom=tables.Atom.from_dtype(dtype),
-                                                    shape=((0,)+data_result.shape[1:]),
+                                                    shape=((0,) + data_result.shape[1:]),
                                                     chunkshape=chunk_size,
                                                     filters=tables.Filters(complevel=9, complib='blosc'))
                 else:
@@ -817,7 +963,7 @@ def save_process_batch(data, func, path_save, file_name, batch_num=200, save_key
                         save_key, data=data_result,
                         dtype=dtype,
                         chunks=chunk_size,
-                        maxshape=((None,)+data_result.shape[1:]),
+                        maxshape=((None,) + data_result.shape[1:]),
                         compression="gzip", compression_opts=9)
             else:
                 with h5py.File(os.path.join(path_save, f'{file_name}.hdf5'), 'a') as f:
@@ -835,7 +981,7 @@ def concat_h5py(fname_1, fname_2, fname_new, create_h5py=False, axis=0, save_key
         fname_1 (str): full file name with path of data 1.
         fname_2 (str): full file name with path of data 2.
         fname_new (str): full file name with path of new data concatenated of data 1 and data 2.
-        create_h5py (bool, optional): wether creating .hdf files. Defaults to False.
+        create_h5py (bool, optional): whether creating .hdf files. Defaults to False.
         axis (int, optional): axis of data array. Defaults to 0.
         save_key (str, optional): keyword of the data to save to file. Defaults to 'data'.
         mode_batch (str, optional): mode of saving data to file by batch. Defaults to 'batch_h5py'.
@@ -856,11 +1002,11 @@ def concat_h5py(fname_1, fname_2, fname_new, create_h5py=False, axis=0, save_key
     if create_h5py:
         path_src_1, src_name_1 = os.path.split(fname_1)
         data_1 = np.asarray(read_data(path_src_1, src_name_1, dict_key=save_key))
-        chunk_size_1 = compute_chunk_size(data_1, 'back_n', axis+1)
+        chunk_size_1 = compute_chunk_size(data_1, 'back_n', axis + 1)
         with h5py.File(fname_new, 'w') as f_w:
             f_w.create_dataset(
                 save_key, data=data_1, dtype=dtype,
-                chunks=chunk_size_1, maxshape=(None,)*data_1.ndim,
+                chunks=chunk_size_1, maxshape=(None,) * data_1.ndim,
                 compression="gzip", compression_opts=9)
     else:
         mycopyfile(fname_1, fname_new)
@@ -869,7 +1015,7 @@ def concat_h5py(fname_1, fname_2, fname_new, create_h5py=False, axis=0, save_key
     data_2 = read_data(path_src_2, src_name_2, dict_key=save_key)
     if mode_batch == 'normal':
         with h5py.File(fname_new, 'a') as f_a:
-            f_a[save_key].resize((f_a[save_key].shape[axis]+data_2.shape[axis]), axis=axis)
+            f_a[save_key].resize((f_a[save_key].shape[axis] + data_2.shape[axis]), axis=axis)
             if axis == 0:
                 f_a[save_key][-data_2.shape[0]:] = data_2
             elif axis == 1:
@@ -878,7 +1024,7 @@ def concat_h5py(fname_1, fname_2, fname_new, create_h5py=False, axis=0, save_key
         raise ParameterError('Invalid mode_batch keyword.')
     elif mode_batch == 'batch_h5py':
         for j in range(0, data_2.shape[axis], batch_num):
-            j_end = data_2.shape[axis] if j+batch_num > data_2.shape[axis] else j+batch_num
+            j_end = data_2.shape[axis] if j + batch_num > data_2.shape[axis] else j + batch_num
             if axis == 0:
                 data_j = data_2[j:j_end]
             elif axis == 1:
@@ -895,9 +1041,22 @@ def concat_h5py(fname_1, fname_2, fname_new, create_h5py=False, axis=0, save_key
         raise ParameterError('Invalid mode_batch keyword.')
 
 
+def create_frame_info(wav_file_names, num_frames, src_name):
+    assert(len(wav_file_names) == len(num_frames))
+    info_list = []
+    index_src = 0
+    for wav_file_name, num_frame in zip(wav_file_names, num_frames):
+        for i in range(num_frame):
+            index_i = index_src + i
+            info_dict_i = {'src': src_name, 'file_name': wav_file_name, 'index': index_i}
+            info_list.append(info_dict_i)
+        index_src += num_frame
+    return info_list
+
+
 def data_seg_create(path_class):
     """Create and save seg wavmats from raw data .wav files,
-        you may run this function only onece.
+        you may run this function only once.
     Args:
         path_class (object class PathSourceRoot): object of class to compute path.
     """
@@ -916,15 +1075,20 @@ def data_seg_create(path_class):
     n_src = len(dir_names)
 
     source_frames = []
+    wav_file_names = []
+    num_frames = []
     for dir_i in dir_names:
-        sources_wavi_np = read_wavs_to_np(dir_i, get_sr(), get_mono())
+        sources_wav_np_i, wav_file_names_i = read_wavs_to_np(dir_i, get_sr(), get_mono())
+        wav_file_names.append([os.path.basename(wav_file_names_j) for wav_file_names_j in wav_file_names_i])
         # original wav sampling points
-        sourceframesi_np = feature_extract('sample_np',
-                                           **{'sources': sources_wavi_np,
-                                              'fl': get_fl(),
-                                              'fs': get_fs()})  # 1d list 2darray to 1d list 2darray
+        sourceframes_np_i = feature_extract('sample_np',
+                                            **{'sources': sources_wav_np_i,
+                                               'fl': get_fl(),
+                                               'fs': get_fs()})  # 1d list 2darray to 1d list 2darray
+        num_frames_i = [frames_file.shape[0] for frames_file in sourceframes_np_i]
+        num_frames.append(num_frames_i)
         # 1d list 2darray to 2darray (n_samples, fl)
-        source_frames.append(np.vstack(np.asarray(sourceframesi_np)))
+        source_frames.append(np.vstack(np.asarray(sourceframes_np_i)))
 
     logging.debug('source_frames.shape')
     for sf_i in source_frames:
@@ -936,6 +1100,10 @@ def data_seg_create(path_class):
     with open(os.path.join(path_seg_root, 'dirname.json'), 'w', encoding='utf-8') as f_w:
         json.dump({'dirname': dir_names_save}, f_w)
 
+    frame_info = {'source_name': dir_names_save, 'wav_file_name': wav_file_names, 'number_frame': num_frames}
+    with open(os.path.join(path_seg_root, 'frame_info.json'), 'w', encoding='utf-8') as f_w:
+        json.dump(frame_info, f_w)
+
     path_seg = path_class.get_path_seg()
     mkdir(path_seg)
     save_datas(dict(zip(dir_names_save, source_frames)), path_seg, dtype='float64')
@@ -943,7 +1111,7 @@ def data_seg_create(path_class):
 
 def data_mixwav_create(path_class):  # pylint: disable=too-many-locals
     """Create and save mixed sources original sampling point wavmat,
-        you may run this function only onece.
+        you may run this function only once.
     Args:
         path_class (object class PathSourceRoot): object of class to compute path.
     """
@@ -975,8 +1143,7 @@ def data_mixwav_create(path_class):  # pylint: disable=too-many-locals
     mkdir(path_source_out)
     dir_names = []
     data_list = []
-    for i in range(1, n_src+1, 1):  # mix 1 to 3 without 0
-        index_ci = []  # e.g.[0,1,2,3] [(1,2)(1,3)(2,3)]
+    for i in range(1, n_src + 1, 1):  # mix 1 to 3 without 0
         if i == 1:
             index_ci = list(combinations(range(n_src), i))
         else:
@@ -993,7 +1160,7 @@ def data_mixwav_create(path_class):  # pylint: disable=too-many-locals
             mix_cij_arr = mixaddframes_np(
                 [source_frames[k] for k in index_ci_j])
             mix_cij_arr = mix_cij_arr.reshape(
-                mix_cij_arr.shape[0:1]+(1,)+mix_cij_arr.shape[-1:])
+                mix_cij_arr.shape[0:1] + (1,) + mix_cij_arr.shape[-1:])
             data_list.append(mix_cij_arr)
     with open(os.path.join(path_source_root, 'dirname.json'), 'w', encoding='utf-8') as f_w:
         json.dump({'dirname': dir_names}, f_w)
@@ -1001,18 +1168,167 @@ def data_mixwav_create(path_class):  # pylint: disable=too-many-locals
     save_datas(dict(zip(dir_names, data_list)), path_source_out)
 
 
+class SpectrumCreate(object):
+    """Create a feature related to spectrum."""
+
+    def __init__(self):
+        pass
+
+    def _spectrum_create(self, sources_wavmat, feature, win_length, hop_length, fix_length=False, window='hamming'):
+        """Abstract method for create spectrum feature sources_frames."""
+        source_frames = []
+        for source_i in sources_wavmat:
+            source_frames.append(feature_extract(
+                feature, **{
+                    'source': source_i.reshape(-1, ),
+                    'window': window,
+                    'win_length': win_length, 'hop_length': hop_length,
+                    'n_fft': win_length, 'center': False,
+                    'dtype': np.complex64, 'fix_length': fix_length}))  # 2D to 3D
+        dtype = np.complex64 if feature in {'phase_spectrum'} else np.float32
+        return np.asarray(source_frames, dtype=dtype)
+
+    def magspectrum_create(self, sources_wavmat, win_length, hop_length, fix_length=False, window='hamming'):
+        """Create magnitude (amplitude) spectrum feature sources_frames."""
+
+        return self._spectrum_create(sources_wavmat, 'magspectrum', win_length, hop_length, fix_length, window)
+
+    def angspectrum_create(self, sources_wavmat, win_length, hop_length, fix_length=False, window='hamming'):
+        """Create angle (phase) spectrum feature sources_frames."""
+
+        return self._spectrum_create(sources_wavmat, 'angspectrum', win_length, hop_length, fix_length, window)
+
+    def phase_spectrum_create(self, sources_wavmat, win_length, hop_length, fix_length=False, window='hamming'):
+        """Create phase spectrum feature sources_frames."""
+
+        return self._spectrum_create(sources_wavmat, 'phase_spectrum', win_length, hop_length, fix_length, window)
+
+    def realspectrum_create(self, sources_wavmat, win_length, hop_length, fix_length=False, window='hamming'):
+        """Create real part of spectrum feature sources_frames."""
+
+        return self._spectrum_create(sources_wavmat, 'realspectrum', win_length, hop_length, fix_length, window)
+
+    def imgspectrum_create(self, sources_wavmat, win_length, hop_length, fix_length=False, window='hamming'):
+        """Create image part of spectrum feature sources_frames."""
+
+        return self._spectrum_create(sources_wavmat, 'imgspectrum', win_length, hop_length, fix_length, window)
+
+    def logmelspectrum_create(self, sources, sr, n_mels, win_length=None, hop_length=None, window=None, mode=0):
+        """Create Log-Mel Spectrogram feature sources_frames."""
+        source_frames = []
+        if mode == 0:  # input wavmat
+            for source_i in sources:
+                source_frames.append(feature_extract(
+                    'logmelspectrum', **{
+                        'source': source_i.reshape(-1, ),
+                        'sr': sr, 'n_mels': n_mels, 'window': window,
+                        'win_length': win_length, 'hop_length': hop_length,
+                        'n_fft': win_length, 'center': False, 'dtype': np.float32}))  # 2D to 3D
+        elif mode == 1:  # input stft spectrum
+            for source_i in sources:
+                source_frames.append(feature_extract(
+                    'logmelspectrum', **{
+                        'S': source_i.transpose() ** 2,
+                        'sr': sr, 'n_mels': n_mels}))  # 2D to 3D
+        return np.asarray(source_frames, dtype=np.float32)
+
+    def mfcc_create(self, sources, sr, n_mfcc,
+                    win_length=None, hop_length=None, window=None, n_mels=None, mode=0):
+        """Create Log-Mel Spectrogram feature sources_frames."""
+        source_frames = []
+        if mode == 0:
+            for source_i in sources:
+                source_frames.append(feature_extract(
+                    'mfcc', **{
+                        'source': source_i.reshape(-1, ), 'sr': sr, 'n_mfcc': n_mfcc,
+                        'n_fft': win_length, 'hop_length': hop_length, 'win_length': win_length,
+                        'window': window, 'center': False,
+                        'n_mels': n_mels, 'dtype': np.float32
+                    }))  # 2D to 3D
+        elif mode == 1:  # input log-power Mel spectrogram
+            for source_i in sources:
+                source_frames.append(feature_extract(
+                    'mfcc', **{
+                        'source': None, 'S': librosa.power_to_db(source_i.transpose()),
+                        'sr': sr, 'n_mfcc': n_mfcc
+                    }))  # 2D to 3D
+        return np.asarray(source_frames, dtype=np.float32)
+
+    def demon_create(self, sources, high=30000, low=20000, cutoff=1000.0, fs=200000, mode='square_law'):
+        """Create Log-Mel Spectrogram feature sources_frames."""
+        source_frames = []
+        for source_i in sources:
+            source_frames.append(feature_extract(
+                'demon', **{
+                    'source': source_i, 'high': high, 'low': low, 'cutoff': cutoff, 'fs': fs, 'mode': mode
+                }))  # 2D to 3D
+        return np.asarray(source_frames, dtype=np.float32)
+
+    def feature_create(self, sources, path_class_out, form_src, **kwargs):
+        if form_src == 'magspectrum':
+            feature = self.magspectrum_create(
+                sources,
+                path_class_out.get_win_length(),
+                path_class_out.get_hop_length(), kwargs['fix_length'], kwargs['window'])
+        elif form_src == 'angspectrum':
+            feature = self.angspectrum_create(
+                sources,
+                path_class_out.get_win_length(),
+                path_class_out.get_hop_length(), kwargs['fix_length'], kwargs['window'])
+        elif form_src == 'phase_spectrum':
+            feature = self.phase_spectrum_create(
+                sources,
+                path_class_out.get_win_length(),
+                path_class_out.get_hop_length(), kwargs['fix_length'], kwargs['window'])
+        elif form_src == 'realspectrum':
+            feature = self.realspectrum_create(
+                sources,
+                path_class_out.get_win_length(),
+                path_class_out.get_hop_length(), kwargs['fix_length'], kwargs['window'])
+        elif form_src == 'imgspectrum':
+            feature = self.imgspectrum_create(
+                sources,
+                path_class_out.get_win_length(),
+                path_class_out.get_hop_length(), kwargs['fix_length'], kwargs['window'])
+        elif form_src == 'logmelspectrum':
+            mode = 0 if 'mode' not in kwargs.keys() else kwargs['mode']
+            if mode == 0:  # input wavmats
+                feature = self.logmelspectrum_create(
+                    sources, kwargs['sr'], kwargs['n_mels'],
+                    path_class_out.get_win_length(),
+                    path_class_out.get_hop_length(), kwargs['window'], mode=mode)
+            elif mode == 1:  # inpute stft spectrum
+                feature = self.logmelspectrum_create(
+                    sources, kwargs['sr'], kwargs['n_mels'],
+                    path_class_out.get_win_length(),
+                    path_class_out.get_hop_length(), mode=mode)
+        elif form_src == 'mfcc':
+            mode = 0 if 'mode' not in kwargs.keys() else kwargs['mode']
+            if mode == 0:  # input wavmats
+                feature = self.mfcc_create(
+                    sources, kwargs['sr'], kwargs['n_mfcc'],
+                    path_class_out.get_win_length(), path_class_out.get_hop_length(),
+                    kwargs['window'], kwargs['n_mels'], mode=mode)
+            elif mode == 1:  # input log-power Mel spectrogram
+                feature = self.mfcc_create(
+                    sources, kwargs['sr'], kwargs['n_mfcc'], mode=mode)
+        elif form_src == 'demon':
+            feature = self.demon_create(sources, **kwargs)
+        else:
+            raise ParameterError('Invalid feature')
+        return feature
+
+
 if __name__ == '__main__':
+    from prepare_data_shipsear_separation_mix_s0tos3 import PathSourceRootSep
+
     logging.basicConfig(format='%(levelname)s:%(message)s',
                         level=logging.INFO)
 
     PATH_ROOT = '../data/shipsEar/mix_separation'
 
     # Create segment datas.
-    PATH_CLASS = PathSourceRoot(PATH_ROOT)
+    PATH_CLASS = PathSourceRootSep(PATH_ROOT)
     data_seg_create(PATH_CLASS)
-
-    # Create original wavmat mixed sources.
-    PATH_CLASS = PathSourceRoot(PATH_ROOT, form_src='wav')
-    data_mixwav_create(PATH_CLASS)
 
     logging.info('finished')

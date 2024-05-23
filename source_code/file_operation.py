@@ -227,7 +227,7 @@ def read_wavs_to_np(path, sr, mono):  # pylint: disable=invalid-name
     """Read .wav files, return list [np.ndarray]."""
     filenames = walk_files_end_str(path, '.wav')
     sources = [librosa.load(fi, sr, mono)[0] for fi in filenames]
-    return sources
+    return sources, filenames
 
 
 def read_wavs_to_list(path, sr, mono):  # pylint: disable=invalid-name

@@ -468,6 +468,7 @@ def compute_best_metric_st(path_metrics, path_best_metric, name_metric, name_set
         name_metric (str): name of the metric to compute. e.g. 'mse'.
         name_set (str): name of the dataset. e.g. 'train', 'val', 'test'.
         better (str, optional): the standard to decide better metrics. Defaults to 'big'.
+        level (int, optional): level of the file.
     """
     best_metric = []  # length==number of the samples
     best_metric_para = []
@@ -1026,8 +1027,9 @@ def compute_best_metrics_sum(path_root, name_set,
         name_set (str): name of the dataset.
         kw_dir_pred (str, optional): name of the predict output directory. Defaults to 'predict_decoder'.
         kw_dir_sum (str, optional): name of the metric sum directory. Defaults to 'metric_sum'.
-        kw_para (str, optional): keyword of the paras directory of metric . Defaults to None.
-        kw_best (str, optional): name of the best metric directory. Defaults to 'best_merge'.
+        kw_para_sum (str, optional): keyword of the paras directory of metric. Defaults to None.
+        kw_best_sum (str, optional): name of the best metric directory. Defaults to 'best_sum'.
+        kw_metric_sum_cope (tuple(str), optional): name of the metrics. Defaults to ('mse', 'sr', 'si_snr').
     """
     # compute metrics save index and metrics
     path_predict = os.path.join(path_root, kw_dir_pred)
@@ -1062,9 +1064,13 @@ if __name__ == '__main__':
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
+    # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
-
-    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
+    # SUB_SET_WAY = 'order'
+    # SPLIT_WAY = None
+    SPLIT_WAY = 'split'
+    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav',
+                                   scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY, split_way=SPLIT_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
 

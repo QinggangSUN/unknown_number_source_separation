@@ -20,7 +20,7 @@ def index_mix_src_ns(n_src):
     Example:
         s0 to s3 [0, 1, 2, 3]
         >>> print(index_mix_src_ns(n_src=4))
-        return: [(1, 2), (1, 3), (2, 3), (1, 2, 3)]
+        [(1, 2), (1, 3), (2, 3), (1, 2, 3)]
     """
     from itertools import combinations
     index_list = []
@@ -80,8 +80,10 @@ if __name__ == '__main__':
     # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
     # SUB_SET_WAY = 'order'
-
-    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
+    # SPLIT_WAY = None
+    SPLIT_WAY = 'split'
+    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav',
+                                   scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY, split_way=SPLIT_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
 

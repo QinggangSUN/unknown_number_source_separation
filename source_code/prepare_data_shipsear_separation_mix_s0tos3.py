@@ -49,7 +49,7 @@ class PathSourceRootSep(PathSourceRoot):
 
 
 def name_mix_src(indexes):
-    """Creat mix source name.
+    """Create mix source name.
     Args:
         indexes (tuple(int)): indexes of the sources.
     Returns:

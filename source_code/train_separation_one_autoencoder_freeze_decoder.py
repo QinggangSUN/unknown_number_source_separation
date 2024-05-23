@@ -38,15 +38,17 @@ from prepare_data_shipsear_recognition_mix_s0tos3 import compute_chunk_size, rea
 from see_metric_single_source_ae_ns import ListDecodedFiles
 from train_functions import output_history, save_model_struct
 from train_single_source_autoencoder_ns import BuildModel, build_dict_model_load, clear_model_weight_file
-from train_single_source_autoencoder_ns import data_save_reshape_ae, test_autoencoder, train_autoencoder
+from train_single_source_autoencoder_ns import data_save_reshape_ae, PadNumberSampleDict, test_autoencoder
+from train_single_source_autoencoder_ns import train_autoencoder
 from train_single_source_autoencoder_ns_search_encoded_dense import compute_num_model, create_decoder_weight_model
 from train_single_source_autoencoder_ns_search_encoded_dense import transpose_names_to_para_src
 
 
-def build_freeze_decoder_model(num_model, path_weight_decoder_files, dict_model_load=None, **kwargs):
+def build_freeze_decoder_model(num_model, input_dim, path_weight_decoder_files, dict_model_load=None, **kwargs):
     """Build a new autoencoder model, load and freeze decoder weights while make encoder trainable.
     Args:
         num_model (int): the index number of model.
+        input_dim (int): dimension of the input vector.
         path_weight_decoder_files (list[str]): full path name of the decoder models.
         dict_model_load (dict, optional): custom objects of model. Defaults to None.
     Returns:
@@ -91,7 +93,7 @@ def train_freeze_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, mode
         fname_model_load (str, optional): file name of model to load. Defaults to None.
     """
     if fname_model_load is None:
-        # give a new moel for the first time training
+        # give a new model for the first time training
         model = autoencoder
         if 'optimizer' in paras.keys():
             optimizer = paras['paras']
@@ -103,7 +105,7 @@ def train_freeze_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, mode
             elif optimizer_type == 'sgd':
                 optimizer = optimizers.SGD(lr=learn_rate, decay=1e-6, momentum=0.9, nesterov=True)
     else:
-        # laod a pre-trained model and continue train
+        # load a pre-trained model and continue train
         if dict_model_load is None:
             model = load_model(fname_model_load)
         else:
@@ -196,9 +198,9 @@ def predict_freeze_autoencoder(model, z_test, path_save, save_name, dummy_input,
         mode (str, optional): {'batch_process', 'batch_save'}, way to predict and save data.
                              Defaults to 'batch_process'.
         bs_pred (int, optional): batch size when predict model. Defaults to 32.
-        compile_model (bool, optional): wether compile model before predict,
-                                        use when load a unconpiled model. Defaults to False.
-        reshape_save (bool, optional): wether reshape data when save data. Defaults to False.
+        compile_model (bool, optional): whether compile model before predict,
+                                        use when load an un-compiled model. Defaults to False.
+        reshape_save (bool, optional): whether reshape data when save data. Defaults to False.
     """
     if compile_model:
         optimizer = optimizers.Adam(lr=1e-3)
@@ -228,7 +230,7 @@ def predict_freeze_autoencoder(model, z_test, path_save, save_name, dummy_input,
                            chunk_type='back_dim', *args, **kwargs):
         """Process data by batch through func, save to path_save.
         Args:
-            data (np.ndarray,shape==(nsam, - - )): data to save
+            data_list (np.ndarray,shape==(nsam, - - )): data to save
             func (function): function to process data
             path_save (str): where to save data
             file_name (str): name of the saved file
@@ -354,6 +356,13 @@ def train_predict_ae(autoencoder, paras, x_dict, z_dict, path_save, dict_model_l
         bool_predict (bool, optional): whether predict ae model. Defaults to True.
     """
     modelname = kwargs['modelname'] if 'modelname' in kwargs.keys() else None
+    bool_num_padd = kwargs['bool_num_padd'] if 'bool_num_padd' in kwargs.keys() else False
+    if bool_num_padd:
+        batch_size = kwargs['batch_size']
+        obj_padd_x = PadNumberSampleDict(x_dict, batch_size)
+        obj_padd_z = PadNumberSampleDict(z_dict, batch_size)
+        x_dict = obj_padd_x.padd_data()
+        z_dict = obj_padd_z.padd_data()
 
     if bool_train:
         train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=modelname)
@@ -381,12 +390,13 @@ def train_predict_ae(autoencoder, paras, x_dict, z_dict, path_save, dict_model_l
                          dict_model_load=dict_model_load, weight_file_name=weight_file_name)
 
 
-def search_model(path_result_root, model_name, src_names, x_dict, z_dict, paras,
+def search_model(path_result_root, model_name, src_names, x_dict, z_dict, paras, input_dim,
                  dict_model_load=None, bool_train=True, bool_clean_weight_file=True, bool_predict=True,
+                 path_result_model=None, path_save_load_decoder=None, dir_name_save='load_decoder',
                  **kwargs):
     """For search best model.
     Args:
-        path_result_root (os.Path): root directory where to save result.
+        path_result_root (os.Path): root directory where the ae models saved.
         model_name (str): name of the model.
         src_names (list[str]): list of src names, e.g. ['Z_0_ns',...,'Z_4_ns'].
         x_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): data of the clear sources,
@@ -394,13 +404,20 @@ def search_model(path_result_root, model_name, src_names, x_dict, z_dict, paras,
         z_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): sum of the outputs,
             which is the input vector in separation problem.
         paras (dict): parameters for train model.
+        input_dim (int / None): dimension of the input vector.
         dict_model_load (dict, optional): custom objects for load model. Defaults to None.
         bool_train (bool, optional): whether train ae model. Defaults to True.
         bool_clean_weight_file (bool, optional): whether clear checkpoint models. Defaults to True.
         bool_predict (bool, optional): whether predict ae model. Defaults to True.
+        path_result_model (os.Path): path where the ae models saved.
+        path_save_load_decoder (os.Path): path where to save results.
+        dir_name_save (str): directory name where to save results.
     """
-    path_result_model = os.path.join(path_result_root, model_name)
-    path_save_load_decoder = os.path.join(path_result_model, 'load_decoder')
+    if path_result_model is None:
+        path_result_model = os.path.join(path_result_root, model_name)
+    mkdir(path_result_model)
+    if path_save_load_decoder is None:
+        path_save_load_decoder = os.path.join(path_result_model, dir_name_save)
     mkdir(path_save_load_decoder)
 
     num_model = compute_num_model(model_name)
@@ -438,7 +455,7 @@ def search_model(path_result_root, model_name, src_names, x_dict, z_dict, paras,
                                                 dict_model_load=dict_model_load)
                 decoder_weight_model_names_i.append(decoder_weight_model_name_j)
 
-            ae_model_i = build_freeze_decoder_model(num_model, decoder_weight_model_names_i,
+            ae_model_i = build_freeze_decoder_model(num_model, input_dim, decoder_weight_model_names_i,
                                                     dict_model_load=dict_model_load, **kwargs)
             ae_model_i.save(ae_model_name_i)
             save_model_struct(ae_model_i, path_save_load_decoder_para_i, 'ae_model_struct')
@@ -472,15 +489,16 @@ if __name__ == '__main__':
     sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)  # pylint: disable=invalid-name
     K.set_session(sess)
 
-    # for shipsear data
     PATH_DATA_ROOT = '../data/shipsEar/mix_separation'
 
     SCALER_DATA = 'max_one'
     # SCALER_DATA = 'or'
     SUB_SET_WAY = 'rand'
     # SUB_SET_WAY = 'order'
-
-    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav', scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY)
+    # SPLIT_WAY = None
+    SPLIT_WAY = 'split'
+    PATH_CLASS = PathSourceRootSep(PATH_DATA_ROOT, form_src='wav',
+                                   scaler_data=SCALER_DATA, sub_set_way=SUB_SET_WAY, split_way=SPLIT_WAY)
     PATH_DATA_S = PATH_CLASS.path_source_root
     PATH_DATA = PATH_CLASS.path_source
 
@@ -488,7 +506,6 @@ if __name__ == '__main__':
     X_NAMES = ['X']
     X_SET_NAMES = [[f'{x_names_i}_{set_name_j}' for set_name_j in SET_NAMES] for x_names_i in X_NAMES]
     X_DICT = [dict(zip(x_set_names_j, read_datas(PATH_DATA, x_set_names_j))) for x_set_names_j in X_SET_NAMES]
-    # Z_NAMES = [f'Z_{i}_ns' for i in range(4)]
     Z_NAMES = ['Z']
     Z_SET_NAMES_R = [[f'{z_name_i}_{name_set_j}_zero' for name_set_j in SET_NAMES] for z_name_i in Z_NAMES]
     Z_SET_NAMES = [[f'{z_name_i}_zero_{name_set_j}' for name_set_j in SET_NAMES] for z_name_i in Z_NAMES]
@@ -530,20 +547,7 @@ if __name__ == '__main__':
                 logging.debug(f'x_i.name {key}')
                 logging.debug(f'x_i.shape {x_dict_i[key].shape}')
 
-            # search_model(PATH_RESULT, 'model_8_2_1', SRC_NAMES, x_dict_i, z_dict_i, None,
-            #              bool_train=True, bool_clean_weight_file=True, bool_predict=True,
-            #              **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                 'n_conv_encoder': 1, 'n_filters': 64, 'encoder_multiple_out': True,
-            #                 'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1})
-
-            # search_model(PATH_RESULT, 'model_8_4_1', SRC_NAMES, x_dict_i, z_dict_i, None,
-            #              bool_train=True, bool_clean_weight_file=True, bool_predict=True,
-            #              **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
-            #                 'n_conv_encoder': 1, 'n_filters': 64,
-            #                 'use_bias': False,'encoder_multiple_out': True,
-            #                 'rnn_type': 'BLSTM', 'latent_dim': 256, 'n_rnn_decoder': 1})
-
-            # model_13 multiple decoder RNN TasNet without mask
+            # Multiple-Decoder RNN TasNet without mask
             search_model(PATH_RESULT, 'model_13_2_1', SRC_NAMES, x_dict_i, z_dict_i, None,
                          bool_train=True, bool_clean_weight_file=True, bool_predict=True,
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
@@ -555,7 +559,7 @@ if __name__ == '__main__':
 
             search_model(PATH_RESULT, 'model_13_3_1', SRC_NAMES, x_dict_i, z_dict_i, None,
                          bool_train=True, bool_clean_weight_file=True, bool_predict=True,
-                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 50, 'batch_size': 8, 'bs_pred': 8,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 200, 'batch_size': 8, 'bs_pred': 8,
                             'bool_num_padd': True,
                              'n_conv_encoder': 1, 'n_filters_conv': 64,
                              'block_type': 'dprnn', 'latent_dim': 200,
@@ -563,13 +567,14 @@ if __name__ == '__main__':
                              'model_type': 'ae', 'encoder_multiple_out': True,
                              'is_multiple_decoder': True, 'use_mask': False})
 
-            # Multiple-Decoder Conv-Tasnet without mask
+            # Multiple-Decoder Conv-TasNet without mask
             search_model(PATH_RESULT, 'model_15_2_6', SRC_NAMES, x_dict_i, z_dict_i, None,
                          bool_train=True, bool_clean_weight_file=True, bool_predict=True,
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 200, 'batch_size': 6, 'bs_pred': 6,
                             'n_conv_encoder': 1, 'n_filters_encoder': 64,
                             'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
                             'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
+                            'output_activation': 'tanh',
                             'model_type': 'ae', 'encoder_multiple_out': True,
                             'is_multiple_decoder': True, 'use_mask': False})
 

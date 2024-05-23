@@ -43,7 +43,7 @@ def query_targets_of_input(n_src, name_input, str_end='zero'):
 
 
 def query_metric_from_file(path_result, name_input, name_channel, name_target, metric_key, name_set, table_num,
-                           name_targets, name_sets=['train', 'val', 'test'], name_para=None, way=0):
+                           name_targets, name_sets=('train', 'val', 'test'), name_para=None, way=0):
     """Query metric from file.
     Args:
         path_result (str): path where to save files.
@@ -168,7 +168,7 @@ def metric_to_csv(n_src, path_result, names_inputs, names_channels, names_target
     return metric_df
 
 
-def create_source_names(name_srcs=['A', 'B', 'C', 'D']):
+def create_source_names(name_srcs=('A', 'B', 'C', 'D')):
     """Create names of sources for table.
     Args:
         name_srcs (list[str], optional): names of the single sources. Defaults to ['A', 'B', 'C', 'D'].
@@ -200,7 +200,7 @@ def create_table_1_names(names_sources, n_src):
         names_channels (list[str]): names of the channels for the specific targets.
         names_targets (list[str]): names of the targets.
     Examples:
-        names_inputs, names_channels, names_targets = create_table_1_names(create_source_names(), 4)
+        >>> names_inputs, names_channels, names_targets = create_table_1_names(create_source_names(), 4)
         >>> print(names_inputs)
         ['A', 'B', 'C', 'D', 'BC', 'BC', 'BD', 'BD', 'CD', 'CD', 'BCD', 'BCD', 'BCD']
         >>> print(names_channels)
@@ -214,7 +214,7 @@ def create_table_1_names(names_sources, n_src):
         names_channels.append(names_sources[i])
         names_targets.append(names_sources[i])
     mix_srcs = index_mix_src_ns(n_src)
-    for i in range(n_src, len(names_sources)):  # multitarget
+    for i in range(n_src, len(names_sources)):  # multiple target
         name_input_i = names_sources[i]
         for mix_src_j in mix_srcs[i-n_src]:
             name_channel_j = names_sources[mix_src_j]
@@ -236,7 +236,7 @@ def create_table_2_names(names_sources, n_src, metric_key):
         names_channels (list[str]): names of the channels for the specific targets.
         names_targets (list[str]): names of the targets.
     Examples:
-        names_inputs, names_channels, names_targets = create_table_2_names(create_source_names(), 4, 'sr')
+        >>> names_inputs, names_channels, names_targets = create_table_2_names(create_source_names(), 4, 'sr')
         >>> print(names_inputs)
         ['A', 'A', 'A', 'B', 'B', 'B', 'C', 'C', 'C', 'D', 'D', 'D',
          'BC', 'BC', 'BC', 'BC', 'BD', 'BD', 'BD', 'BD', 'CD', 'CD', 'CD', 'CD', 'BCD', 'BCD', 'BCD']
@@ -246,7 +246,7 @@ def create_table_2_names(names_sources, n_src, metric_key):
         >>> print(names_targets)
         ['A', 'A', 'A', 'B', 'B', 'B', 'C', 'C', 'C', 'D', 'D', 'D',
          'B', 'C', 'B', 'C', 'B', 'D', 'B', 'D', 'C', 'D', 'C', 'D', 'B', 'C', 'D']
-        names_inputs, names_channels, names_targets = create_table_2_names(create_source_names(), 4, 'mse')
+        >>> names_inputs, names_channels, names_targets = create_table_2_names(create_source_names(), 4, 'mse')
         >>> print(names_inputs)
         ['A', 'A', 'A', 'B', 'B', 'B', 'C', 'C', 'C', 'D', 'D', 'D', 'BC', 'BC', 'BD', 'BD', 'CD', 'CD', 'BCD']
         >>> print(names_channels)
@@ -296,7 +296,7 @@ def create_table_2_names(names_sources, n_src, metric_key):
     return names_inputs, names_channels, names_targets
 
 
-def table_names_to_result_names(name_source, n_src, name_srcs=['A', 'B', 'C', 'D'], str_end='zero'):
+def table_names_to_result_names(name_source, n_src, name_srcs=('A', 'B', 'C', 'D'), str_end='zero'):
     """Convert name of the source in tables to name in saved results.
     Args:
         name_source (str): name of the source to convert.
@@ -333,14 +333,14 @@ if __name__ == '__main__':
         for metric_key_i in ['mse', 'sr', 'si_snr', 'sdr']:
             for name_set_j in ['train', 'val', 'test']:
                 metric_to_csv(n_src, path_result, names_inputs_1, names_channels_1, names_targets_1, metric_key_i,
-                            name_set_j, ['train', 'val', 'test'], 1, path_result)
+                              name_set_j, ['train', 'val', 'test'], 1, path_result)
 
         for metric_key_i in ['mse', 'sr', 'si_snr']:
             names_inputs_2_i, names_channels_2_i, names_targets_2_i = create_table_2_names(
                 names_sources, n_src, metric_key_i)
             for name_set_j in ['train', 'val', 'test']:
                 metric_to_csv(n_src, path_result, names_inputs_2_i, names_channels_2_i, names_targets_2_i, metric_key_i,
-                            name_set_j, ['train', 'val', 'test'], 2, path_result)
+                              name_set_j, ['train', 'val', 'test'], 2, path_result)
 
     # Algorithm 1
     path_result_root = '../result_separation_one_autoencoder/'
@@ -418,14 +418,14 @@ if __name__ == '__main__':
         for metric_key_i in ['mse', 'sr', 'si_snr', 'sdr']:
             for name_set_j in ['test']:
                 metric_to_csv(n_src, path_result, names_inputs_1, names_channels_1, names_targets_1, metric_key_i,
-                            name_set_j, ['train', 'val', 'test'], 1, path_result)
+                              name_set_j, ['train', 'val', 'test'], 1, path_result)
 
         for metric_key_i in ['mse', 'sr', 'si_snr']:
             names_inputs_2_i, names_channels_2_i, names_targets_2_i = create_table_2_names(
                 names_sources, n_src, metric_key_i)
             for name_set_j in ['test']:
                 metric_to_csv(n_src, path_result, names_inputs_2_i, names_channels_2_i, names_targets_2_i, metric_key_i,
-                            name_set_j, ['train', 'val', 'test'], 2, path_result)
+                              name_set_j, ['train', 'val', 'test'], 2, path_result)
 
     # Algorithm 2
     path_result_root = '../result_separation_ae_ns_single/'
@@ -454,8 +454,8 @@ if __name__ == '__main__':
         for metric_key_i in ['mse', 'sr', 'si_sdr', 'sdr']:
             for name_set_j in ['train', 'val', 'test']:
                 metric_to_csv(n_src, path_result, names_inputs_0_mix, names_channels_0_mix, names_targets_0_mix,
-                            metric_key_i, name_set_j, ['train', 'val', 'test'], 0, path_result,
-                            name_para=name_para)
+                              metric_key_i, name_set_j, ['train', 'val', 'test'], 0, path_result,
+                              name_para=name_para)
 
     names_sources_mix = names_sources[n_src:]
     names_result_sources_mix = names_result_sources[n_src:]
