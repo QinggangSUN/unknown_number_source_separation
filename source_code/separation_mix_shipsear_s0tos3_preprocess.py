@@ -208,7 +208,7 @@ def load_source_frames(path_source_root, dir_names, **kwargs):
 
 
 def x_y_sets_create(path_class, rates_set, **kwargs):
-    """Create X_train, X_val, X_test scaled data, and create Y_train, Y_val, Y_test data labels.
+    """Create X_train, X_val, X_test scalered data, and create Y_train, Y_val, Y_test data labels.
     Args:
         path_class (object class PathSourceSep): object of class to compute path.
         rates_set (list[float]): rates of datasets.

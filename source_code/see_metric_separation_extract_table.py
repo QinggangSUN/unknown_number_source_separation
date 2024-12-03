@@ -447,11 +447,12 @@ if __name__ == '__main__':
     create_table_algorithm_2(path_result)
 
     def create_table_known_number(path_result, name_para):
+        path_result = os.path.join(path_result, 'metric')
         names_inputs_0, names_channels_0, names_targets_0 = create_table_1_names(names_sources, n_src)
         names_inputs_0_mix = names_inputs_0[n_src:]
         names_channels_0_mix = names_channels_0[n_src:]
         names_targets_0_mix = names_targets_0[n_src:]
-        for metric_key_i in ['mse', 'sr', 'si_sdr', 'sdr']:
+        for metric_key_i in ['mse', 'sr', 'si_sdr', 'sdr']:  # si_sdr == si_snr
             for name_set_j in ['train', 'val', 'test']:
                 metric_to_csv(n_src, path_result, names_inputs_0_mix, names_channels_0_mix, names_targets_0_mix,
                               metric_key_i, name_set_j, ['train', 'val', 'test'], 0, path_result,
@@ -464,43 +465,91 @@ if __name__ == '__main__':
     # path_result_root = '../result_separation_multiple_autoencoder/'
     path_result_root = '../result_separation_known_number/'
 
-    path_result = path_result_root+'model_8_2_1/'
+    path_result = path_result_root+'model_8_2_1_lr1e-3_ep50/'
     name_para = '1_n3_50'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_8_3_1/'
+    path_result = path_result_root+'model_8_3_1_lr1e-3_ep100/'
     name_para = '1_n3_100'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_10_2_1/'
+    # path_result = path_result_root+'model_10_1_1_lr1e-3_ep50/'
+    # name_para = '1_n3_50'
+    # create_table_known_number(path_result, name_para)
+
+    path_result = path_result_root+'model_10_2_1_lr1e-3_ep100/'
     name_para = '1_n3_100'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_10_3_1/'
+    path_result = path_result_root+'model_10_3_1_lr1e-3_ep100/'
     name_para = '1_n3_100'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_13_2_1/'
+    # path_result = path_result_root+'model_11_2_1_lr1e-3_ep100/'
+    # name_para = '1_n3_100'
+    # create_table_known_number(path_result, name_para)
+
+    # path_result = path_result_root+'model_11_3_1_lr1e-3_ep100/'
+    # name_para = '1_n3_100'
+    # create_table_known_number(path_result, name_para)
+
+    # path_result = path_result_root+'model_12_2_1_lr1e-3_ep100/'
+    # name_para = '1_n3_100'
+    # create_table_known_number(path_result, name_para)
+
+    # path_result = path_result_root+'model_12_3_1_lr1e-3_ep100/'
+    # name_para = '1_n3_100'
+    # create_table_known_number(path_result, name_para)
+
+    path_result = path_result_root+'model_13_2_1_lr1e-3_ep100/'
     name_para = '1_n3_100'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_13_3_1/'
-    name_para = '1_n3_100'
+    path_result = path_result_root+'model_13_3_1_lr1e-3_ep300/'
+    name_para = '1_n3_300'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_14_1_6/'
+    path_result = path_result_root+'model_14_1_6_lr1e-3_ep200_linear_gln/'
     name_para = '1_n3_200'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_15_2_6/'
+    # path_result = path_result_root+'model_14_2_6_lr1e-3_ep200_linear_gln/'
+    # name_para = '1_n3_200'
+    # create_table_known_number(path_result, name_para)
+
+    # path_result = path_result_root+'model_15_1_6_lr1e-3_ep200/'
+    # name_para = '1_n3_200'
+    # create_table_known_number(path_result, name_para)
+
+    # path_result = path_result_root+'model_15_1_6_lr1e-3_ep200_linear_gln/'
+    # name_para = '1_n3_200'
+    # create_table_known_number(path_result, name_para)
+
+    path_result = path_result_root+'model_15_2_6_lr1e-3_ep200/'
     name_para = '1_n3_200'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_20_5_10/'
+    # path_result = path_result_root+'model_15_2_6_lr1e-3_ep200_linear_gln/'
+    # name_para = '1_n3_200'
+    # create_table_known_number(path_result, name_para)
+
+    # path_result = path_result_root+'model_15_2_6_lr1e-3_ep200_tanh_noNL/'
+    # name_para = '1_n3_200'
+    # create_table_known_number(path_result, name_para)
+
+    path_result = path_result_root+'model_20_5_10_lr1e-4_ep400/'
     name_para = '1_n4_400'
     create_table_known_number(path_result, name_para)
 
-    path_result = path_result_root+'model_21_6_10/'
+    # path_result = path_result_root+'model_20_6_10_lr1e-3_ep600/'
+    # name_para = '1_n3_600'
+    # create_table_known_number(path_result, name_para)
+
+    # path_result = path_result_root+'model_21_5_10_lr1e-4_ep800/'
+    # name_para = '1_n4_800'
+    # create_table_known_number(path_result, name_para)
+
+    path_result = path_result_root+'model_21_6_10_lr1e-3_ep800/'
     name_para = '1_n3_800'
     create_table_known_number(path_result, name_para)
 

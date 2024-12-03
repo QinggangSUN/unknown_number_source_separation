@@ -575,7 +575,7 @@ def build_model_14_search(encoded_shape, path_weight_decoder_files, dict_model_l
         n_outputs (int): number of output srcs.
         use_residual (bool, optional): whether to use a 1x1-conv of residual path in TCN block. Defaults to True.
         use_skip (bool, optional): whether to use a 1x1-conv of skip-connection path in TCN block. Defaults to True.
-        use_sum_repeats (bool, optional): whether use sums of skip-connection paths and residual path in each repeat.
+        use_sum_repeats (bool, optional): whether to use sums of skip-connection paths and residual path in each repeat.
                                         Defaults to False.
         output_activation (str, optional): activation function of output layers. Defaults to None.
     """

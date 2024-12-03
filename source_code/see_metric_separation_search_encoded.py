@@ -228,7 +228,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                     sp_data_s_i = []  # [src][set](n_sams, fl, nsrc=1)
                     for k in range(len(src_names_st)):
-                        sp_data_s_i.append([np.asarray(data_sp_z_l)[:, :, k:k+1] for data_sp_z_l in data_sp_z])
+                        sp_data_s_i.append([np.asarray(data_sp_z_l)[:, :, k:k + 1] for data_sp_z_l in data_sp_z])
 
                     for data_s_l, data_sp_l, src_name_l in zip(s_data_i, sp_data_s_i, src_names_st):
                         path_metric_l = os.path.join(path_metric_i, src_name_l)
@@ -247,7 +247,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                     sp_data_sm_i = []  # [src][set](n_sams, fl, nsrc=1)
                     for k in sm_index_i:
-                        sp_data_sm_i.append([np.asarray(data_sp_z_l)[:, :, k:k+1] for data_sp_z_l in data_sp_z])
+                        sp_data_sm_i.append([np.asarray(data_sp_z_l)[:, :, k:k + 1] for data_sp_z_l in data_sp_z])
 
                     for data_s_l, data_sp_l, src_name_l in zip(sm_data_i, sp_data_sm_i, src_name_sm_i):
                         path_metric_l = os.path.join(path_metric_i, src_name_l)
@@ -273,12 +273,12 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                     sp_data_sz_i = []  # [src][set](n_sams, fl, nsrc=1)
                     for k in sz_index_i:
-                        sp_data_sz_i.append([np.asarray(data_sp_z_l)[:, :, k:k+1] for data_sp_z_l in data_sp_z])
+                        sp_data_sz_i.append([np.asarray(data_sp_z_l)[:, :, k:k + 1] for data_sp_z_l in data_sp_z])
 
-                    for data_sp_l, src_name_sz_l in zip(sp_data_sz_i, src_name_sz_i):   # [set] in [src][set]
+                    for data_sp_l, src_name_sz_l in zip(sp_data_sz_i, src_name_sz_i):  # [set] in [src][set]
                         path_metric_l = os.path.join(path_metric_i, src_name_sz_l)
                         # mkdir(path_metric_l)
-                        for data_s_l_lj, src_name_l_lj in zip(sm_data_i, src_name_sm_i):   # [set] in [src][set]
+                        for data_s_l_lj, src_name_l_lj in zip(sm_data_i, src_name_sm_i):  # [set] in [src][set]
                             path_metric_l_lj = os.path.join(path_metric_l, src_name_l_lj)
                             mkdir(path_metric_l_lj)
 
@@ -375,7 +375,7 @@ def concat_results(num_list, path_root, dir_para_2, dir_para_1='predict_decoder'
         dir_para_1 (str, optional): name of the directory where saved model output files. Defaults to 'predict_decoder'.
         name_set (str): name of the dataset.
     Example:
-        before cancatenate files:
+        before concatenate files:
         ./search_decoder/1_n3_50
         └─test_sets_1_n1_50
           ├─test_0_4000
@@ -407,7 +407,7 @@ def concat_results(num_list, path_root, dir_para_2, dir_para_1='predict_decoder'
                   Z_3_zero_test_decoded.hdf5 shape==(4160,10547,1)
                   Z_3_zero_test_encoded.hdf5
 
-            after cancatenate files:
+            after concatenate files:
             ./search_decoder/1_n3_50
             └─1_n1_50_test_sets
               └─test_0_8160
@@ -444,8 +444,8 @@ def concat_results(num_list, path_root, dir_para_2, dir_para_1='predict_decoder'
     """
     len_num = len(num_list)
     for j, num_j in enumerate(num_list):
-        if j+1 < len_num:
-            num_k = num_list[j+1]
+        if j + 1 < len_num:
+            num_k = num_list[j + 1]
             path_dir_1 = os.path.join(path_root, f'{name_set}_{0}_{num_j}', dir_para_1, dir_para_2)
             path_dir_2 = os.path.join(path_root, f'{name_set}_{num_j}_{num_k}', dir_para_1, dir_para_2)
             path_dir_new = os.path.join(path_root, f'{name_set}_{0}_{num_k}', dir_para_1, dir_para_2)
@@ -757,8 +757,8 @@ def compute_best_metrics(path_root, name_set, names_metric_st, names_metric_mt, 
         kw_para (str, optional): keyword of the paras directory of metric . Defaults to None.
         kw_best (str, optional): name of the best metric directory. Defaults to 'best_merge'.
     Raises:
-        ParameterError: check name_metric_st, raise: f'Unsupport metric {name_metric_st}'.
-        ParameterError: check name_metric_mt, raise: f'Unsupport metric {name_metric_mt}'.
+        ParameterError: check name_metric_st, raise: f'Unsupported metric {name_metric_st}'.
+        ParameterError: check name_metric_mt, raise: f'Unsupported metric {name_metric_mt}'.
     """
     # compute metrics save index and metrics
     path_metric = os.path.join(path_root, kw_dir)
@@ -845,7 +845,7 @@ def compute_best_metrics(path_root, name_set, names_metric_st, names_metric_mt, 
                 compute_best_metric_st(path_dir_metrics_src_st, path_best_src_metric, name_metric_st, name_set,
                                        better='big')
             else:
-                raise ParameterError(f'Unsupport metric {name_metric_st}')
+                raise ParameterError(f'Unsupported metric {name_metric_st}')
 
             compute_all_metrics_st(path_dir_metrics_src_st, ['sr', 'si_snr'], name_set,
                                    path_best_src_metric, path_best_src_metric_subs_st, name_metric_st)
@@ -896,7 +896,7 @@ def compute_best_metrics(path_root, name_set, names_metric_st, names_metric_mt, 
                                        path_best_src_metric, name_metric_mt, name_set,
                                        better='big')
             else:
-                raise ParameterError(f'Unsupport metric {name_metric_mt}')
+                raise ParameterError(f'Unsupported metric {name_metric_mt}')
             compute_all_metrics_mt(name_src_subs, names_st,
                                    path_dir_metrics_src, name_query_metrics_mt, name_set,
                                    path_best_src_metric, name_metric_mt)
@@ -971,7 +971,7 @@ def compute_metrics_sum(object_decoded_files, x_data, set_names, z_src_pred_name
                                # hist_bins=(0, 1e-1, 10),
                                save_name='mse')
                 save_metric(path_metrics_para_two, 'mse', ['mse_mean'], [np.asarray(mse_mean)],
-                            {'mse': dict(zip(set_names, mse_list))})                    
+                            {'mse': dict(zip(set_names, mse_list))})
 
                 sr_list, sr_mean = compute_metric(data_s_k, data_sp_k, samerate_acc_np)
                 display_metric(sr_list, path_metrics_para_two, set_names,
@@ -1005,7 +1005,7 @@ def compute_best_metric_sum_predict(path_predict, path_best_metric, name_metric,
                                  dict_key=f'{name_metric}_{name_set}_para')
     predict_data_best_para = []
     for i, name_i in enumerate(names_best_paras):
-        path_pred_i = os.path.join(path_predict, name_i) 
+        path_pred_i = os.path.join(path_predict, name_i)
         predict_data_i = np.asarray(read_data(path_pred_i, f'{kw_fname_pred}_{name_set}_decoded')[i])
         predict_data_best_para.append(predict_data_i)
         del path_pred_i
@@ -1020,7 +1020,7 @@ def compute_best_metrics_sum(path_root, name_set,
                              kw_dir_pred='predict_decoder',
                              kw_dir_sum='metric_sum', kw_para_sum='mse', kw_best_sum='best_sum',
                              kw_metric_sum_cope=('mse', 'sr', 'si_snr'),
-                            ):
+                             ):
     """Compute the best metric with which paras.
     Args:
         path_root (str): root path where saved metrics.
@@ -1116,31 +1116,31 @@ if __name__ == '__main__':
                              Z_SRC_NAMES[:4], Z_SRC_NAMES[4:], SM_SRC_NAMES[4:],
                              ['mse', 'sr', 'si_snr', 'sdr', 'si_sdr'], ['sr', 'si_snr'],
                              kw_dir='metric', kw_para=None, kw_best='best_merge')
-        # compute_best_metrics_sum(os.path.join(PATH_SAVE_ROOT, 'model_8_2_1', 'search_decoder', '1_n3_50'), name_set_j,
-        #                          kw_para_sum='mse')
+        # compute_best_metrics_sum(os.path.join(PATH_SAVE_ROOT, 'model_8_2_1', 'search_decoder', '1_n3_50'),
+        #                          name_set_j, kw_para_sum='mse')
 
         compute_best_metrics(os.path.join(PATH_SAVE_ROOT, 'model_13_2_1', 'search_decoder', '1_n3_100'), name_set_j,
                              ['mse', 'sr'], ['mse', 'sr', 'sdr', 'si_sdr'],
                              Z_SRC_NAMES[:4], Z_SRC_NAMES[4:], SM_SRC_NAMES[4:],
                              ['mse', 'sr', 'si_snr', 'sdr', 'si_sdr'], ['sr', 'si_snr'],
                              kw_dir='metric', kw_para=None, kw_best='best_merge')
-        # compute_best_metrics_sum(os.path.join(PATH_SAVE_ROOT, 'model_13_2_1', 'search_decoder', '1_n3_100'), name_set_j,
-        #                          kw_para_sum='mse')
+        # compute_best_metrics_sum(os.path.join(PATH_SAVE_ROOT, 'model_13_2_1', 'search_decoder', '1_n3_100'),
+        #                          name_set_j, kw_para_sum='mse')
 
         compute_best_metrics(os.path.join(PATH_SAVE_ROOT, 'model_15_2_6', 'search_decoder', '1_n3_200'), name_set_j,
                              ['mse', 'sr'], ['mse', 'sr', 'sdr', 'si_sdr'],
                              Z_SRC_NAMES[:4], Z_SRC_NAMES[4:], SM_SRC_NAMES[4:],
                              ['mse', 'sr', 'si_snr', 'sdr', 'si_sdr'], ['sr', 'si_snr'],
                              kw_dir='metric', kw_para=None, kw_best='best_merge')
-        # compute_best_metrics_sum(os.path.join(PATH_SAVE_ROOT, 'model_15_2_6', 'search_decoder', '1_n3_200'), name_set_j,
-        #                          kw_para_sum='mse')
+        # compute_best_metrics_sum(os.path.join(PATH_SAVE_ROOT, 'model_15_2_6', 'search_decoder', '1_n3_200'),
+        #                          name_set_j, kw_para_sum='mse')
 
         compute_best_metrics(os.path.join(PATH_SAVE_ROOT, 'model_21_6_10', 'search_decoder', '1_n4_1600'), name_set_j,
                              ['mse', 'sr'], ['mse', 'sr', 'sdr', 'si_sdr'],
                              Z_SRC_NAMES[:4], Z_SRC_NAMES[4:], SM_SRC_NAMES[4:],
                              ['mse', 'sr', 'si_snr', 'sdr', 'si_sdr'], ['sr', 'si_snr'],
                              kw_dir='metric', kw_para=None, kw_best='best_merge')
-        # compute_best_metrics_sum(os.path.join(PATH_SAVE_ROOT, 'model_21_6_10', 'search_decoder', '1_n4_1600'), name_set_j,
-        #                          kw_para_sum='mse')
+        # compute_best_metrics_sum(os.path.join(PATH_SAVE_ROOT, 'model_21_6_10', 'search_decoder', '1_n4_1600'),
+        #                          name_set_j, kw_para_sum='mse')
 
     logging.info('finished')

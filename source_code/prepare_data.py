@@ -106,8 +106,7 @@ class Subsets(object):
         return subs
 
     def select_subsets_nums(self, ndata, rates, num_sets=None):
-        """Input num of one source,
-        output 2D list of [subseti][numi]"""
+        """Input num of one source, output 2D list of [subseti][numi]"""
         randseq = self.randseq.copy()
         subs = []
         for i in range(len(self.rates)-1):

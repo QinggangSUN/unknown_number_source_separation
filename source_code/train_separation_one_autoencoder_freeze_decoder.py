@@ -398,7 +398,7 @@ def search_model(path_result_root, model_name, src_names, x_dict, z_dict, paras,
     Args:
         path_result_root (os.Path): root directory where the ae models saved.
         model_name (str): name of the model.
-        src_names (list[str]): list of src names, e.g. ['Z_0_ns',...,'Z_4_ns'].
+        src_names (list[str]): list of src names, e.g. ['Z_0_ns',...,'Z_3_ns'].
         x_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): data of the clear sources,
             which is the output vector in separation problem.
         z_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): sum of the outputs,

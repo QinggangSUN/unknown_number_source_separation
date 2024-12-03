@@ -56,6 +56,9 @@ from models.conv_tasnet.blocks import TcnBranch, TemporalConvBlock
 from models.conv_tasnet.layers import DepthwiseConv1D, Conv1DTranspose, NormalLayer, GlobalNormalization
 from models.wave_u_net.layers import AudioClipLayer, CropLayer, CropConcatLayer,  InterpolationLayer
 
+from experiments.fuss.train_separation_fuss import get_fuss_hparams
+from experiments.KIM2023.train_separation_kim import get_kim_hparams
+
 
 def data_save_reshape_ae(data):
     """Reshape data to last dim is not 1, when shape ndim > 2.
@@ -192,7 +195,7 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
             elif optimizer_type == 'sgd':
                 optimizer = optimizers.SGD(lr=learn_rate, decay=1e-6, momentum=0.9, nesterov=True)
     else:
-        # load a pre-trained model and continue train
+        # load a pre-trained model and continue training
         if dict_model_load is None:
             model = load_model(fname_model_load)
         else:
@@ -696,11 +699,13 @@ def build_dict_model_load(num_model, **kwargs):
         else:
             user_metrics_name = ['loss']
 
-    if 'dict_model_load' in kwargs.keys():
+    if 'dict_model_load' in kwargs.keys():  # custom metrics, loss and so on
         dict_model_load = kwargs['dict_model_load']
+        dict_model_load.update(**dict(zip(user_metrics_name, user_metrics_func)))
     else:
         dict_model_load = dict(zip(user_metrics_name, user_metrics_func))
 
+    # custom layers and modules in networks
     if num_model in (8, 9):
 
         dict_model_load.update(**{'LayerNormalization': LayerNormalization,
@@ -1017,6 +1022,17 @@ class BuildModel(object):
         bs_pred = kwargs['bs_pred'] if 'bs_pred' in kwargs.keys() else batch_size
         if num_model in (1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21):
             paras = {'i': lr_i, 'j': lr_j, 'epochs': epochs, 'batch_size': batch_size, 'bs_pred': bs_pred}
+            if 'loss_name' in kwargs.keys():
+                paras.update(**{'loss_name': kwargs['loss_name']})
+            if 'loss_func' in kwargs.keys():
+                paras.update(**{'loss_func': kwargs['loss_func']})
+            if 'user_metrics_func' in kwargs.keys():
+                paras.update(**{'metrics_func': kwargs['user_metrics_func']})
+            if 'user_metrics_name' in kwargs.keys():
+                paras.update(**{'metrics_name': kwargs['user_metrics_name']})
+            if 'optimizer' in kwargs.keys():
+                paras.update(**{'optimizer': kwargs['optimizer']})
+
         elif num_model in (5, 6):
             loss_func = kwargs['loss_func'] if 'loss_func' in kwargs.keys() else vae_loss(z_mean=0., z_log_var=1.)
             user_metrics_func = kwargs['user_metrics_func'] if ('user_metrics_func' in kwargs.keys()
@@ -1043,6 +1059,48 @@ class BuildModel(object):
         return paras
 
 
+def create_loss(paras, model):
+    """Create loss function with extra parameters.
+    Args:
+        paras (dict): parameters for train model.
+        model (keras.Model): a full keras model.
+    Returns:
+        loss_func: loss function.
+    """
+    loss_func = paras['loss_func']
+    if paras['loss_name'] == 'fuss':
+        hparams = get_fuss_hparams()
+        if paras['batch_size'] is not None:
+            hparams.batch_size = paras['batch_size']
+        loss_func = loss_func(model, hparams)
+    if paras['loss_name'] == 'kim':
+        hparams = get_kim_hparams()
+        if paras['batch_size'] is not None:
+            hparams.batch_size = paras['batch_size']
+        loss_func = loss_func(model, hparams)
+    return loss_func
+
+
+def create_metrics(paras, model):
+    """Create metric function with extra parameters.
+    Args:
+        paras (dict): parameters for train model.
+        model (keras.Model): a full keras model.
+    Returns:
+        metrics_name (list(str)): 
+    """
+    metrics_name, metrics_func = paras['metrics_name'], paras['metrics_func'],
+    for k, metric_name_k in enumerate(metrics_name):
+        if metric_name_k == 'loss_fuss_keras':
+            hparams = get_fuss_hparams()
+        elif metric_name_k == 'loss_kim_keras':
+            hparams = get_kim_hparams()
+        if paras['batch_size'] is not None:
+            hparams.batch_size = paras['batch_size']
+        metrics_func[k] = metrics_func[k](model, hparams)
+    return metrics_name, metrics_func
+
+
 def search_model(path_result, model_name, input_dim, x_dict, z_dict, z_set_name, **kwargs):
     """For search best model.
     Args:
@@ -1051,13 +1109,22 @@ def search_model(path_result, model_name, input_dim, x_dict, z_dict, z_set_name,
         input_dim (tuple, np.ndarray.shape): shape of the input tensor.
         x_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): dict of model input, mixed data.
         z_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): dict of model output, data target.
-        z_set_name (str): name of the predict dataset, sub-dir of model.
+        z_set_name (str, None): name of the predict dataset, sub-dir of model.
     """
     num_model = compute_num_model(model_name)
     object_build_model = BuildModel(num_model, input_dim, **kwargs)
     autoencoder, decoder, n_encoder_layer, _ = object_build_model.build_model(**kwargs)
     dict_model_load = build_dict_model_load(num_model, **kwargs)
     paras = object_build_model.build_model_paras(**kwargs)
+
+    if 'loss_func' in paras.keys():
+        paras['loss_func'] = create_loss(paras, autoencoder)
+
+    if 'metrics_name' in paras.keys():
+        metrics_name, metrics_func = create_metrics(paras, autoencoder)
+        paras['metrics_name'], paras['metrics_func'] = metrics_name, metrics_func
+        for metric_name, metric_func in zip(metrics_name, metrics_func):
+            dict_model_load[metric_name] = metric_func
 
     path_save = os.path.join(path_result, model_name)
     bool_train = kwargs['bool_train'] if 'bool_train' in kwargs.keys() else True
@@ -1084,7 +1151,7 @@ def search_model(path_result, model_name, input_dim, x_dict, z_dict, z_set_name,
     if bool_clean_weight_file:
         model_dirname = kwargs['model_dirname'] if 'model_dirname' in kwargs.keys() else 'auto_model'
         pos_epoch = kwargs['pos_epoch'] if 'pos_epoch' in kwargs.keys() else -2
-        clear_model_weight_files(os.path.join(path_save, model_dirname), pos_epoch)
+        clear_model_weight_file(os.path.join(path_save, model_dirname), pos_epoch)
     bool_test_weight = kwargs['bool_test_weight'] if 'bool_test_weight' in kwargs.keys() else True
     if bool_test_weight:
         bool_test_ae_w = kwargs['bool_test_ae_w'] if 'bool_test_ae_w' in kwargs.keys() else False

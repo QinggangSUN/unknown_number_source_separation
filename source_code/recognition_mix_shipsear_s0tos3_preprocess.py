@@ -13,7 +13,7 @@ import os
 
 from sklearn import preprocessing
 import numpy as np
-from prepare_data_shipsear_recognition_mix_s0tos3 import read_data
+from prepare_data_shipsear_recognition_mix_s0tos3 import read_data, read_datas, save_datas
 import prepare_data_shipsear_recognition_mix_s0tos3 as m_pre_data_shipsear
 
 
@@ -96,7 +96,7 @@ def compute_subset_nums(fname_frame_info, mode='select',
                 num_frames_clip.append(num_i)
                 sum_num += num_i
             else:
-                num_frames_clip.append(num_clip-sum_num)
+                num_frames_clip.append(num_clip - sum_num)
                 break
         return num_frames_clip
 
@@ -144,17 +144,17 @@ def compute_subset_nums(fname_frame_info, mode='select',
             num_sum_sets = [np.sum(num_set_i) for num_set_i in num_sets]
             if np.sum(np.equal(num_sum_sets, target_num_sets)) == len(target_num_sets):
                 break
-            for i in range(len(rates_set)-1):
+            for i in range(len(rates_set) - 1):
                 index_file = 0
                 while np.sum(num_sets[i]) != target_num_sets[i]:
                     if np.sum(num_sets[i]) < target_num_sets[i]:
                         num_sets[i][index_file] = num_sets[i][index_file] + 1
-                        num_sets[i+1][index_file] = num_sets[i+1][index_file] - 1
+                        num_sets[i + 1][index_file] = num_sets[i + 1][index_file] - 1
                     else:
                         if num_sets[i][index_file] > 1:
                             num_sets[i][index_file] = num_sets[i][index_file] - 1
-                            num_sets[i+1][index_file] = num_sets[i+1][index_file] + 1
-                    index_file = index_file + 1 if index_file < len(num_sets[i])-1 else 0
+                            num_sets[i + 1][index_file] = num_sets[i + 1][index_file] + 1
+                    index_file = index_file + 1 if index_file < len(num_sets[i]) - 1 else 0
         return num_sets
 
     def convert_num_to_index(num_frames_sets):
@@ -171,7 +171,7 @@ def compute_subset_nums(fname_frame_info, mode='select',
         for j in range(n_files):
             for i in range(n_sets):
                 num_i_j = num_frames_sets[i][j]
-                indexes[i] += list(range(istart, istart+num_i_j))
+                indexes[i] += list(range(istart, istart + num_i_j))
                 istart += num_i_j
         return indexes
 
@@ -330,10 +330,77 @@ class XsetSourceFrames(object):
         return self._sourceframes_mm
 
 
+def convert_y_label_nhot_to_nchannel(y_n_hot):
+    """Convert n-hot label to label with length equal to number of channels.
+    Args:
+        y_n_hot (np.ndarray): n-hot label.
+    Returns:
+        y_n_channel (np.ndarray): label with length equal to number of channels.
+    Examples:
+        # >>> print(convert_y_label_nhot_to_nchannel(np.array([[0, 0, 1]])))
+        # [[0 0 0 1]]
+        # >>> print(convert_y_label_nhot_to_nchannel(np.array([[0, 0, 0]])))
+        # [[1 0 0 0]]
+    """
+    y_n_channel = np.zeros((y_n_hot.shape[0], y_n_hot.shape[1] + 1), dtype=np.int32)
+    y_n_channel[:, 1:] = y_n_hot
+    if np.sum(y_n_hot) == 0:
+        y_n_channel[0][0] = 1
+    return y_n_channel
+
+
+def convert_y_labels_nhot_to_nchannel(y_n_hot):
+    """Convert n-hot label to label with length equal to number of channels.
+    Args:
+        y_n_hot (np.ndarray): n-hot label.
+    Returns:
+        y_n_channel (np.ndarray): label with length equal to number of channels.
+    Examples:
+        # >>> y_n_channel = print(convert_y_labels_nhot_to_nchannel(np.array([[[0, 0, 1]],[[0, 0, 0]]])))
+        # [[[0 0 0 1]]  [[1 0 0 0]]]
+    """
+    if y_n_hot.ndim == 2:
+        y_n_hot = np.expand_dims(y_n_hot, -2)
+    y_n_channel = np.empty((y_n_hot.shape[0], y_n_hot.shape[1], y_n_hot.shape[2] + 1), dtype=np.int32)
+    for i, y_n_hot_i in enumerate(y_n_hot):
+        y_n_channel_i = convert_y_label_nhot_to_nchannel(y_n_hot_i)
+        y_n_channel[i:i + 1, :, :] = y_n_channel_i
+    return y_n_channel
+
+
+def create_y_labels_nchannel(path_source=None,
+                             obj_path=None, path_root=None, form_src=None,
+                             scaler_data=None, sub_set_way=None, split_way=None,
+                             y_filenames=('Y_train', 'Y_val', 'Y_test'),
+                             y_f_filenames=('Y_f_train', 'Y_f_val', 'Y_f_test'),
+                             file_extension='.hdf5'):
+    """Create label with length equal to number of channels from n-hot labels.
+    Args:
+        path_source (str, optional): path where save target sources. Defaults to None.
+        obj_path (object, optional): an object related to class PathSourceRoot. Defaults to None.
+        path_root (str, optional): if path_data is None, compute path_data through class PathSourceRoot. Defaults to None.
+        form_src (str, optional): type of feature. Defaults to None.
+        scaler_data (str, optional): way of scaler data. Defaults to None.
+        sub_set_way (str, optional) ['rand', 'order']: way of splitting data sets. Defaults to None.
+        split_way (str, optional) [None, 'split', 'select']: way of splitting data strips. Defaults to None.
+        y_filenames (tuple(str), optional): file names of the Y data sets. Defaults to ('Y_train', 'Y_val', 'Y_test').
+        y_f_filenames (tuple, optional):  file names of the Y_f data sets. Defaults to ('Y_f_train', 'Y_f_val', 'Y_f_test').
+        file_extension (str, optional): filename extension. Defaults to '.hdf5'.
+    """
+    if path_source is None:
+        path_source = obj_path(
+            path_root, form_src=form_src, scaler_data=scaler_data, sub_set_way=sub_set_way,
+            split_way=split_way).path_source
+
+    if not os.path.exists(os.path.join(path_source, f'{y_f_filenames[0]}{file_extension}')):
+        y_list = read_datas(path_source, y_filenames)
+        y_f_list = [convert_y_labels_nhot_to_nchannel(y_i) for y_i in y_list]
+        save_datas(dict(zip(y_f_filenames, y_f_list)), path_source, dtype=np.int32)
+
+
 if __name__ == '__main__':
     import os
     import logging
-    import numpy as np
     import pickle
     import json
 

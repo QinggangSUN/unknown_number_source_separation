@@ -38,6 +38,10 @@ Please cite this work in your publications as :
 	(4) Algorithm 3.
 		train_single_source_autoencoder_ns.py
 		train_separation_one_autoencoder_freeze_decoder.py
+	(5) FUSS.
+		train_separation_fuss.py
+	(6) CBIR in (Kim, 2023).
+		train_separation_kim.py
 </pre>
 #  Reference
 Please cite the original work as :  

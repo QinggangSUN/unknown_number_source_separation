@@ -53,7 +53,7 @@ def build_model_1(input_dim, encoding_dim, output_dim, act_c, n_nodes=(8, 4, 2),
         if layer_norm:
             x = LayerNormalization(center=False, scale=False)(x)
         if batch_norm and layer_norm:
-            logging.warning('batch normalization and layer normalizaion both used')
+            logging.warning('batch normalization and layer normalization both used')
     encoded = Dense(encoding_dim, activation=act_c, use_bias=use_bias)(x)
 
     def decoder_func(inputs):
@@ -487,7 +487,7 @@ def build_model_5(input_dim, latent_dim, intermediate_dim, n_pad_input=13, n_fil
 
 
 def build_model_6(input_dim, encoding_dim, latent_dim, intermediate_dim, output_dim,
-                  use_bias=True, act_c='relu', epsilon_std=1.0, n_nodes=[0.5]):
+                  use_bias=True, act_c='relu', epsilon_std=1.0, n_nodes=(0.5,)):
     """MLP Variatrional Auto-Enconder.
         Auto-Encoding Variational Bayes https://arxiv.org/abs/1312.6114
     """
@@ -614,7 +614,7 @@ def build_model_8(input_dim, n_pad_input, chunk_size, chunk_advance,
         n_filters_conv (int): number of the filters in encoder layer.
         kernel_size (int): kernel_size of the convolutional layers in encoder layers.
         strides (int): strides of the convolutional layers in encoder layers.
-        batch_norm (bool): whether using batch normolization layers in encoder layers.
+        batch_norm (bool): whether using batch normalization layers in encoder layers.
         act_c (str): activation function in the convolutional layers in encoder layersr.
         n_rnn_encoder (int): number of the RNN layers in encoder layers.
         n_rnn_decoder (int): number of the RNN layers in decoder layers.
@@ -623,7 +623,7 @@ def build_model_8(input_dim, n_pad_input, chunk_size, chunk_advance,
         act_r (str): activation function in RNN layer.
         use_bias (bool): whether to use bias in all neurons.
         n_outputs (int): number of output srcs.
-        encoder_multiple_out (bool): trick, for module train_separation_one_autoencoder_freeze_decoder.
+        encoder_multiple_out (bool): whether to use extra dense layers for separator.
         batch_size (int, optional): batch size of the samples during training. Default None.
     """
     frame_length = input_dim + n_pad_input
@@ -683,7 +683,7 @@ def build_model_8(input_dim, n_pad_input, chunk_size, chunk_advance,
             else:
                 raise ValueError('Wrong encoder output dimision.')
 
-            if encoder_multiple_out:  # Trick, only use in separator modules
+            if encoder_multiple_out:  # whether to use extra dense layers for separator
                 x = Dense(units=units_r, use_bias=use_bias)(x)
                 logging.debug(f'first dense out {x}')  # (bs, time_step=329, units_r)
 
@@ -784,7 +784,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
         n_filters_encoder (int): number of the filters in encoder layer.
         kernel_size (int): kernel_size of the convolutional layers in encoder layers.
         strides (int): strides of the convolutional layers in encoder layers.
-        batch_norm (bool): whether using batch normolization layers in encoder layers.
+        batch_norm (bool): whether using batch normalization layers in encoder layers.
         act_c (str): activation function in the convolutional layers in encoder layersr.
         n_block_encoder (int): number of the RNN layers in encoder layers.
         n_block_decoder (int): number of the RNN layers in decoder layers.
@@ -797,7 +797,8 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
         act_r (str): activation function in RNN layer.
         use_ln_decoder (bool): whether using layer normalization layers in decoder layers.
         model_type (str, optional): trick, the model used for separator or autoencoder. Defaults to 'separator'.
-        encoder_multiple_out (bool, optional): trick, for module train_separation_one_autoencoder_freeze_decoder. Defaults to False.
+        encoder_multiple_out (bool, optional): whether to use extra dense layers for separator.
+            Defaults to False.
         batch_size (int, optional): batch size of the samples during training. Defaults to None.
         output_activation (str, optional): activation function of output layers. Defaults to None.
     """
@@ -1001,7 +1002,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
         # lambda layer x[:,:,:,i_src]
         n_encoder_layer += n_outputs
 
-    # encoder_multiple_out, Trick, only use in separator modules
+    # encoder_multiple_out: whether to use extra dense layers for separator
     if encoder_multiple_out:
         n_encoder_layer += n_outputs
 
@@ -1059,10 +1060,10 @@ def build_model_14(input_dim, n_pad_input,
 
     # tcn_branch
     # use_mask (bool): whether multiple mask with encoded vector.
-    # is_multiple_decoder (bool): whether use multiple decoder in networks.
-    # use_residual (bool): whether use a 1x1-conv of residual path in TCN block.
-    # use_skip (bool): whether use a 1x1-conv of skip-connection path in TCN block.
-    # use_sum_repeats (bool): whether use sums of skip-connection paths and residual path in each repeat
+    # is_multiple_decoder (bool): whether to use multiple decoder in networks.
+    # use_residual (bool): whether to use a 1x1-conv of residual path in TCN block.
+    # use_skip (bool): whether to use a 1x1-conv of skip-connection path in TCN block.
+    # use_sum_repeats (bool): whether to use sums of skip-connection paths and residual path in each repeat
     #                           as next repeats' input
     #   use_mask, use_residual, use_skip, use_sum_repeats, is_multiple_decoder, -> works   network structure
     # True/False,         True,     True,      True/False,                True, ->  True   Conv-TasNet or Encoder-Decoder with Multiple Decoder
@@ -1098,7 +1099,7 @@ def build_model_14(input_dim, n_pad_input,
         is_multiple_decoder (bool): whether the network is encoder - multiple decoder structure.
         use_residual (bool, optional): whether to use a 1x1-conv of residual path in TCN block. Defaults to True.
         use_skip (bool, optional): whether to use a 1x1-conv of skip-connection path in TCN block. Defaults to True.
-        use_sum_repeats (bool, optional): whether use sums of skip-connection paths and residual path in each repeat. Defaults to False.
+        use_sum_repeats (bool, optional): whether to use sums of skip-connection paths and residual path in each repeat. Defaults to False.
         use_mask (bool, optional): whether multiple mask with encoded vector. Defaults to True.
         act_mask (str, optional): type of activation of mask layer. Defaults to 'sigmoid'.
         output_activation (str, optional): activation function of output layers. Defaults to None which equal to "linear".
@@ -1508,7 +1509,7 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
     if batch_norm:
         num_encoder_layer += 1
 
-    # encoder_multiple_out, Trick, only use in separator modules
+    # encoder_multiple_out: whether to use extra dense layers for separator
     if encoder_multiple_out:
         num_encoder_layer += n_outputs
 

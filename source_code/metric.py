@@ -10,41 +10,6 @@ E-mail: sun10qinggang@163.com
 import numpy as np
 
 
-def samerate_acc_cut_np(y_true, y_pred, delta=1e-10):
-    """Same rate (cosine similarity) including cut small value using np."""
-    y_true = np.asarray(
-        [delta if yi >= 0 and yi < delta else yi for yi in y_true], dtype=np.float32)
-    y_true = np.asarray(
-        [-delta if yi < 0 and yi > -delta else yi for yi in y_true], dtype=np.float32)
-    y_pred = np.asarray(
-        [delta if yi >= 0 and yi < delta else yi for yi in y_pred], dtype=np.float32)
-    y_pred = np.asarray(
-        [-delta if yi < 0 and yi > -delta else yi for yi in y_pred], dtype=np.float32)
-
-    p_t = np.dot(y_pred, y_true)
-    p_p = np.dot(y_pred, y_pred)
-    t_t = np.dot(y_true, y_true)
-    numerator = np.abs(p_t)
-    denominator = np.sqrt(p_p*t_t)
-    denominator = np.clip(denominator, 1e-30, 1e30)
-    same_rate = numerator/denominator
-    same_rate = np.clip(same_rate, 1e-30, 1.0)
-    return same_rate
-
-
-def samerate_acc_clip_np(y_true, y_pred):
-    """Same rate (cosine similarity) including clip denominator using np."""
-    p_t = np.dot(y_pred, y_true)
-    p_p = np.dot(y_pred, y_pred)
-    t_t = np.dot(y_true, y_true)
-    numerator = np.abs(p_t)
-    denominator = np.sqrt(p_p*t_t)
-    denominator = np.clip(denominator, 1e-30, 1e30)
-    same_rate = numerator/denominator
-    same_rate = np.clip(same_rate, 1e-30, 1.0)
-    return same_rate
-
-
 def samerate_acc_stabilizer_np(y_true, y_pred, epsi=1e-8):
     """Cosine similarity same rate including denominator stabilizer using np.
         Scott Wisdom, Hakan Erdogan, Daniel P. W. Ellis, et al. What’s all the Fuss about Free Universal Sound

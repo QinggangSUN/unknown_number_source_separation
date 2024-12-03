@@ -286,7 +286,7 @@ def recover_pad_num_samples(data_s, data_sp):
 def recover_pad_num_samples_list(data_s_list, data_sp_list):
     """Recover predict outputs of networks to real numbers of samples.
     Args:
-        data_s_list (list[np.ndarray]): datasets of target samples.
+        data_s_list (list[np.ndarray], np.ndarray): datasets of target samples.
         data_sp_list (list[np.ndarray]): datasets of outputs of networks.
     Returns:
         data_sp_list_recovered (list[np.ndarray]): recovered datasets of outputs of networks.

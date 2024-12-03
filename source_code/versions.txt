@@ -23,3 +23,6 @@ v1.3 Fix some problems and add more experiments
            Add AE models parameter "output_activation", fix related results.
        New features:
            Add experiments separation using autoencoder-separator approach with known numbers.
+v1.4 Add more experiments
+       New features:
+           Add experiments separation using FUSS and CBIR.

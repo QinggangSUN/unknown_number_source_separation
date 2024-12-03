@@ -754,7 +754,7 @@ def save_datas(set_dict, path_save, **kwargs):
     elif form_save == 'npy':
         for name_i, data_i in set_dict.items():
             np.save(os.path.join(path_save, f'{name_i}.npy'), {save_key2: data_i})
-    elif form_save == 'picke':
+    elif form_save == 'pickle':
         for name_i, data_i in set_dict.items():
             with open(os.path.join(path_save, f'{name_i}.pickle'), 'wb') as f_wb:
                 pickle.dump({save_key2: data_i}, f_wb)
@@ -776,6 +776,39 @@ def save_datas(set_dict, path_save, **kwargs):
                     csv.DictWriter(f_w, name_i).writerows(data_i)
     else:
         raise ParameterError('Invalid form_save keyword.')
+
+
+def update_json(new_data, filename):
+    """Update new data to .json file.
+    Args:
+        new_data (dict): a new dictionary.
+        filename (str): the file to be updated.
+    """
+    import json
+    with open(filename, 'r+') as file:
+        file_data = json.load(file)
+        file_data.update(new_data)
+        file.seek(0)
+        json.dump(file_data, file)
+
+
+def update_hdf5(new_data, filename, **kwargs):
+    """Update new data to .json file.
+    Args:
+        new_data (dict): a new dictionary.
+        filename (str): the file to be updated.
+    """
+    import h5py
+    chunk_type = kwargs['chunk_type'] if 'chunk_type' in kwargs.keys() else 'back_dim'
+    dtype = kwargs['dtype'] if 'dtype' in kwargs.keys() else np.dtype('float32')
+
+    for name_i, data_i in new_data.items():
+        chunk_size_i = compute_chunk_size(data_i, chunk_type)
+        with h5py.File(filename, 'a') as f_a:
+            f_a.create_dataset(
+                name_i, data=data_i, dtype=dtype,
+                chunks=chunk_size_i,
+                compression="gzip", compression_opts=9)
 
 
 def save_datas_continue(set_dict, path_save, **kwargs):
@@ -1297,7 +1330,7 @@ class SpectrumCreate(object):
                     sources, kwargs['sr'], kwargs['n_mels'],
                     path_class_out.get_win_length(),
                     path_class_out.get_hop_length(), kwargs['window'], mode=mode)
-            elif mode == 1:  # inpute stft spectrum
+            elif mode == 1:  # input stft spectrum
                 feature = self.logmelspectrum_create(
                     sources, kwargs['sr'], kwargs['n_mels'],
                     path_class_out.get_win_length(),
