@@ -30,7 +30,7 @@ def samerate_loss(y_true, y_pred, delta=1e-10):
     y_true, y_pred = tf.transpose(
         y_true, [0, 3, 2, 1]), tf.transpose(y_pred, [0, 3, 2, 1])
 
-    dn = y_pred.get_shape()[-1].value     # pylint: disable=invalid-name
+    dn = y_pred.get_shape()[-1].value  # pylint: disable=invalid-name
     y_true = tf.reshape(y_true, [-1, dn])
     y_pred = tf.reshape(y_pred, [-1, dn])
 
@@ -48,7 +48,7 @@ def samerate_loss(y_true, y_pred, delta=1e-10):
     ytt = tf.reduce_sum(tf.multiply(y_true, y_true), axis=-1)
     denominator = tf.sqrt(tf.multiply(ypp, ytt))
     srs = tf.divide(ypt, denominator)
-    sr = 1.0-tf.reduce_mean(tf.stack(srs), axis=-1)     # pylint: disable=invalid-name
+    sr = 1.0 - tf.reduce_mean(tf.stack(srs), axis=-1)  # pylint: disable=invalid-name
     return sr
 
 
@@ -57,7 +57,7 @@ def samerate_acc(y_true, y_pred, delta=1e-10):
     y_true, y_pred = tf.transpose(
         y_true, [0, 3, 2, 1]), tf.transpose(y_pred, [0, 3, 2, 1])
 
-    dn = y_pred.get_shape()[-1].value     # pylint: disable=invalid-name
+    dn = y_pred.get_shape()[-1].value  # pylint: disable=invalid-name
     y_true = tf.reshape(y_true, [-1, dn])
     y_pred = tf.reshape(y_pred, [-1, dn])
 
@@ -75,14 +75,14 @@ def samerate_acc(y_true, y_pred, delta=1e-10):
     ytt = tf.reduce_sum(tf.multiply(y_true, y_true), axis=-1)
     denominator = tf.sqrt(tf.multiply(ypp, ytt))
     srs = tf.divide(ypt, denominator)
-    sr = tf.reduce_mean(tf.stack(srs), axis=-1)     # pylint: disable=invalid-name
+    sr = tf.reduce_mean(tf.stack(srs), axis=-1)  # pylint: disable=invalid-name
     return sr
 
 
 def samerate_acc_d2_clip(y_true, y_pred, delta=1e-10):
     """Samerate (cosine similarity) keras accuracy function using Tensorflow."""
 
-    dn = y_pred.get_shape()[-1].value     # pylint: disable=invalid-name
+    dn = y_pred.get_shape()[-1].value  # pylint: disable=invalid-name
     y_true = tf.reshape(y_true, [-1, dn])
     y_pred = tf.reshape(y_pred, [-1, dn])
 
@@ -100,7 +100,7 @@ def samerate_acc_d2_clip(y_true, y_pred, delta=1e-10):
     ytt = tf.reduce_sum(tf.multiply(y_true, y_true), axis=-1)
     denominator = tf.sqrt(tf.multiply(ypp, ytt))
     srs = tf.divide(ypt, denominator)
-    sr = tf.reduce_mean(tf.stack(srs), axis=-1)     # pylint: disable=invalid-name
+    sr = tf.reduce_mean(tf.stack(srs), axis=-1)  # pylint: disable=invalid-name
     return sr
 
 
@@ -108,7 +108,7 @@ def samerate_acc_d2(y_true, y_pred, delta=1e-8, n_output=4):
     """Cosine similarity same rate including denominator stabilizer using Tensorflow.
         Scott Wisdom, Hakan Erdogan, Daniel P. W. Ellis, et al. What’s all the Fuss about Free Universal Sound
         Separation Data?. ICASSP 2021. https://doi.org/10.1109/ICASSP39728.2021.9414774."""
-    dn = y_pred.get_shape()[-1].value     # pylint: disable=invalid-name
+    dn = y_pred.get_shape()[-1].value  # pylint: disable=invalid-name
     y_true = tf.reshape(y_true, [-1, dn])
     y_pred = tf.reshape(y_pred, [-1, dn])
 
@@ -117,9 +117,9 @@ def samerate_acc_d2(y_true, y_pred, delta=1e-8, n_output=4):
     ypp = tf.reduce_sum(tf.multiply(y_pred, y_pred), axis=axis)
     ytt = tf.reduce_sum(tf.multiply(y_true, y_true), axis=axis)
 
-    denominator = tf.sqrt(tf.multiply(ypp, ytt))+delta
+    denominator = tf.sqrt(tf.multiply(ypp, ytt)) + delta
     srs = tf.divide(ypt, denominator)
-    sr = tf.reduce_mean(tf.stack(srs), axis=axis)     # pylint: disable=invalid-name
+    sr = tf.reduce_mean(tf.stack(srs), axis=axis)  # pylint: disable=invalid-name
     return sr
 
 
@@ -128,7 +128,7 @@ def samerate_loss2(y_true, y_pred):
     y_true, y_pred = tf.transpose(
         y_true, [0, 3, 2, 1]), tf.transpose(y_pred, [0, 3, 2, 1])
 
-    dn = y_pred.get_shape()[-1].value     # pylint: disable=invalid-name
+    dn = y_pred.get_shape()[-1].value  # pylint: disable=invalid-name
     y_true = tf.reshape(y_true, [-1, dn])
     y_pred = tf.reshape(y_pred, [-1, dn])
 
@@ -137,7 +137,7 @@ def samerate_loss2(y_true, y_pred):
     ytt = tf.reduce_sum(tf.multiply(y_true, y_true), axis=-1)
     denominator = tf.clip_by_value(tf.sqrt(tf.multiply(ypp, ytt)), 1e-30, 1e30)
     srs = tf.clip_by_value(tf.divide(ypt, denominator), 1e-30, 1.0)
-    sr = 1.0-tf.reduce_mean(tf.stack(srs), axis=-1)     # pylint: disable=invalid-name
+    sr = 1.0 - tf.reduce_mean(tf.stack(srs), axis=-1)  # pylint: disable=invalid-name
     return sr
 
 
@@ -146,7 +146,7 @@ def samerate_acc2(y_true, y_pred):
     y_true, y_pred = tf.transpose(
         y_true, [0, 3, 2, 1]), tf.transpose(y_pred, [0, 3, 2, 1])
 
-    dn = y_pred.get_shape()[-1].value     # pylint: disable=invalid-name
+    dn = y_pred.get_shape()[-1].value  # pylint: disable=invalid-name
     y_true = tf.reshape(y_true, [-1, dn])
     y_pred = tf.reshape(y_pred, [-1, dn])
 
@@ -155,7 +155,7 @@ def samerate_acc2(y_true, y_pred):
     ytt = tf.reduce_sum(tf.multiply(y_true, y_true), axis=-1)
     denominator = tf.clip_by_value(tf.sqrt(tf.multiply(ypp, ytt)), 1e-30, 1e30)
     srs = tf.clip_by_value(tf.divide(ypt, denominator), 1e-30, 1.0)
-    sr = tf.reduce_mean(tf.stack(srs), axis=-1)     # pylint: disable=invalid-name
+    sr = tf.reduce_mean(tf.stack(srs), axis=-1)  # pylint: disable=invalid-name
     return sr
 
 

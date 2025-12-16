@@ -26,3 +26,13 @@ v1.3 Fix some problems and add more experiments
 v1.4 Add more experiments
        New features:
            Add experiments separation using FUSS and CBIR.
+v1.5 Fix some problems and add more experiments
+       Fix bugs:
+           Fix build_freeze_decoder_model model_15_2_6, model_21_6_10.
+       New features:
+           Add BSS experiments.
+           Add run time and FLOPs computation.
+           Update some results.
+           
+       
+

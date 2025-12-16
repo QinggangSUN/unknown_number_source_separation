@@ -253,10 +253,10 @@ def compute_sdr(s_list, sp_list, path_metric, file_name, set_name, hist_bins, sa
         s_list (list[np.ndarray,shape==(n_src,n_sams,n_channel=1,fl)]): list of target data.
         sp_list (list[np.ndarray,shape==(n_src,n_sams,n_channel=1,fl)]): list of predict data.
         path_metric (str): path where to save files.
-        file_name (str): name of file to save.
+        file_name (tuple(str)): name of file to save, e.g. ('sdr', 'isr', 'sir', 'sar').
         set_name (list[str]): name of the sources, e.g. ['s_1', 's_2', 's_3'].
-        hist_bins (tuple(float, float, int), optional): paras for hist. Defaults to None.
-        save_name (str): name of file to save.
+        hist_bins (tuple(tuple(float, float, int))): paras for hist.
+        save_name (tuple(str)): name of file to save.
         is_save_metric (bool, optional): whether save metric to file. Defaults to True.
     Returns:
         metric_list (list[np.ndarray]): [metric](n_src, n_sams), list of metrics.
@@ -298,10 +298,10 @@ def compute_si_sdr(s_list, sp_list, scaling, path_metric, file_name, set_name, h
         sp_list (list[np.ndarray,shape==(n_src,n_sams,n_channel=1,fl)]): list of predict data.
         scaling (bool): si_sdr True or sd_sdr False.
         path_metric (str): path where to save files.
-        file_name (list[str]): list of metric name, e.g. ['sdr', 'isr', 'sir', 'sar'].
+        file_name (tuple(str)): tuple of metric name, e.g. ('si_sdr', 'si_sir', 'si_sar').
         set_name (list[str]): name of the sources, e.g. ['s_1', 's_2', 's_3'].
-        hist_bins (tuple(float, float, int)): paras for hist.
-        save_name (str): name of file to save.
+        hist_bins (tuple(tuple(float, float, int))): paras for hist.
+        save_name (tuple(str)): name of file to save.
         is_save_metric (bool, optional): whether save metric to file. Defaults to True.
     Returns:
         metric_list (list[np.ndarray]): [metric](n_src, n_sams), list of metrics.
@@ -321,7 +321,6 @@ def compute_si_sdr(s_list, sp_list, scaling, path_metric, file_name, set_name, h
 
     for j, (s_j, sp_j) in enumerate(zip(s_arr, sp_arr)):
         si_sdr_class = ScaleInvariantSDR(s_j, sp_j, scaling=scaling)
-        # sdr_arr[j], sir_arr[j], sar_arr[j] =
         score_dict = si_sdr_class.evaluate()
         scores = [value for key, value in score_dict.items()][1:]
         for k, score in enumerate(scores):

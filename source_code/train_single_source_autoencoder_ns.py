@@ -15,6 +15,7 @@ E-mail: sun10qinggang@163.com
 import gc
 import logging
 import os
+import time
 
 import tensorflow
 if tensorflow.__version__ >= '2.0':
@@ -28,7 +29,7 @@ else:
     from keras import backend as K
 from keras import optimizers
 import keras.losses
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import ModelCheckpoint, TensorBoard, Callback
 from keras.models import load_model, Model
 if keras.__version__ >= '2.3.1':
     from keras.layers import LayerNormalization
@@ -60,6 +61,14 @@ from experiments.fuss.train_separation_fuss import get_fuss_hparams
 from experiments.KIM2023.train_separation_kim import get_kim_hparams
 
 
+def tf2_get_keras_flops(model):
+    run_meta = tf.compat.v1.RunMetadata()
+    opts = tf.compat.v1.profiler.ProfileOptionBuilder.float_operation()
+    flops = tf.compat.v1.profiler.profile(graph=tf.compat.v1.keras.backend.get_session().graph,
+                                          run_meta=run_meta, cmd='op', options=opts)
+    return flops.total_float_ops
+
+
 def data_save_reshape_ae(data):
     """Reshape data to last dim is not 1, when shape ndim > 2.
     Args:
@@ -84,7 +93,7 @@ def predict_autoencoder(model, z_test, path_save, save_name, mode='batch_process
                              Defaults to 'batch_process'.
         bs_pred (int, optional): batch size when predict model. Defaults to 32.
         compile_model (bool, optional): whether compile model before predict,
-                                        use when load an uncompiled model. Defaults to False.
+                                        use when load an un-compiled model. Defaults to False.
         reshape_save (bool, optional): whether reshape data when save data. Defaults to False.
     """
     if compile_model:
@@ -169,11 +178,23 @@ def test_autoencoder(x_dict, z_names=None, modelname=None, paras=None,
         predict_autoencoder(model, x_dataset, path_out, save_name, mode=mode_pred, bs_pred=bs_pred)
 
 
+class EpochTimeCallback(Callback):
+    def on_train_begin(self, logs={}):
+        self.times = []
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch_start_time = time.time()
+
+    def on_epoch_end(self, epoch, logs=None):
+        epoch_time = time.time() - self.epoch_start_time
+        self.times.append(epoch_time)
+
+
 def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=None,
                       dict_model_load=None, fname_model_load=None):
     """Train autoencoder model.
     Args:
-        autoencoder (keras.Model): a keras autoencoder model, no use when dict_model_load is not None.
+        autoencoder (keras.Model, None): a keras autoencoder model, no use when dict_model_load is not None.
         paras (dict): parameters for train model.
         x_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): dict of model input, data to predict.
         z_dict (dict{str:np.ndarray(float),shape=(n_sams,1,fl)}): dict of model output, data predict target.
@@ -194,6 +215,8 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
                 optimizer = optimizers.Adam(lr=learn_rate)
             elif optimizer_type == 'sgd':
                 optimizer = optimizers.SGD(lr=learn_rate, decay=1e-6, momentum=0.9, nesterov=True)
+            else:
+                raise ParameterError(f'unsupported optimizer_type {optimizer_type}')
     else:
         # load a pre-trained model and continue training
         if dict_model_load is None:
@@ -240,6 +263,7 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
                                  verbose=1, period=1, save_best_only=True)
     path_board = os.path.join(path_save, 'tensorbord', modelname)
     mkdir(path_board)
+    epoch_time_callback = EpochTimeCallback()
 
     batch_size = paras['batch_size']
     shuffle = paras['shuffle'] if 'shuffle' in paras.keys() else True
@@ -250,9 +274,15 @@ def train_autoencoder(autoencoder, paras, x_dict, z_dict, path_save, modelname=N
                         batch_size=batch_size,
                         shuffle=shuffle,
                         validation_data=(x_val, z_val),
-                        callbacks=[TensorBoard(log_dir=path_board), checkpoint])
+                        callbacks=[TensorBoard(log_dir=path_board), checkpoint, epoch_time_callback])
 
+    epoch_times = epoch_time_callback.times
+    train_logs_dict = dict()
+    train_logs_dict.update({'epoch_times': epoch_times})
     model.save(os.path.join(path_save_model, f'{modelname}_auto.h5'))
+    train_logs_dict.update({'FLOPs': tf2_get_keras_flops(model)})
+
+    save_datas(train_logs_dict, path_save_model, form_save='json', file_name='train_logs')
 
     path_save_history = os.path.join(path_save, 'loss')
     mkdir(path_save_history)
@@ -370,7 +400,7 @@ def save_encoder_decoder(n_encoder_layer, decoder=None, path_save_model=None,
     save_model_struct(encoder, path_save_model, 'encoder_model_struct')
 
     if decoder is None:
-        # DO NOT use this, doesnot working !
+        # DO NOT use this, does not work !
         decoder = part_back_model(auto_model, auto_model.get_layer(encoder_out_layer_name).output)
     else:
         logging.debug(f'num auto layer {len(auto_model.layers[n_encoder_layer+1:])}')
@@ -480,6 +510,8 @@ class PadNumberSample(object):
                     data_add = np.asarray(data)[-num_add:]
                 elif mode == 'zero':
                     data_add = np.zeros((num_add,)+tuple(np.asarray(data).shape[1:]), dtype=np.float32)
+                else:
+                    raise ParameterError(f'unsupported mode {mode}')
                 data_padd = np.vstack((data, data_add))
                 self.data_padd = data_padd
         return self.data_padd
@@ -536,7 +568,7 @@ class PadNumberSampleDict(object):
 def train_test_ae(autoencoder, decoder, n_encoder_layer, paras, x_dict, z_dict, z_set_name, path_save,
                   dict_model_load=None, fname_model_load=None,
                   bool_train=True, bool_test_ae=True, bool_save_ed=True, bool_test_ed=True,
-                  bool_num_padd=False, obj_padd_x=None, obj_padd_z=None):
+                  bool_num_pad=False, obj_padd_x=None, obj_padd_z=None):
     """Train and test autoencoder models.
     Args:
         autoencoder (keras.Model): model of autoencoder.
@@ -553,12 +585,12 @@ def train_test_ae(autoencoder, decoder, n_encoder_layer, paras, x_dict, z_dict, 
         bool_test_ae (bool, optional): whether test ae model. Defaults to True.
         bool_save_ed (bool, optional): whether save encoder and decoder model. Defaults to True.
         bool_test_ed (bool, optional): whether test encoder and decoder model. Defaults to True.
-        bool_num_padd (bool, optional): whether padd samples to make number of samples is divisible by batch size.
+        bool_num_pad (bool, optional): whether padd samples to make number of samples is divisible by batch size.
                                         Defaults to False.
         obj_padd_x (PadNumberSampleDict, optional): object to padd x_dict. Defaults to None.
         obj_padd_z (PadNumberSampleDict, optional): object to padd z_dict. Defaults to None.
     """
-    if bool_num_padd:
+    if bool_num_pad:
         x_dict = obj_padd_x.padd_data()
         z_dict = obj_padd_z.padd_data()
     if bool_train:
@@ -1095,6 +1127,8 @@ def create_metrics(paras, model):
             hparams = get_fuss_hparams()
         elif metric_name_k == 'loss_kim_keras':
             hparams = get_kim_hparams()
+        else:
+            raise ParameterError(f'unsupported metric_name_k {metric_name_k}')
         if paras['batch_size'] is not None:
             hparams.batch_size = paras['batch_size']
         metrics_func[k] = metrics_func[k](model, hparams)
@@ -1131,8 +1165,8 @@ def search_model(path_result, model_name, input_dim, x_dict, z_dict, z_set_name,
     bool_test_ae = kwargs['bool_test_ae'] if 'bool_test_ae' in kwargs.keys() else True
     bool_save_ed = kwargs['bool_save_ed'] if 'bool_save_ed' in kwargs.keys() else True
     bool_test_ed = kwargs['bool_test_ed'] if 'bool_test_ed' in kwargs.keys() else True
-    bool_num_padd = kwargs['bool_num_padd'] if 'bool_num_padd' in kwargs.keys() else False
-    if bool_num_padd:
+    bool_num_pad = kwargs['bool_num_pad'] if 'bool_num_pad' in kwargs.keys() else False
+    if bool_num_pad:
         batch_size = kwargs['batch_size']
         obj_padd_x = PadNumberSampleDict(x_dict, batch_size)
         obj_padd_z = PadNumberSampleDict(z_dict, batch_size)
@@ -1145,7 +1179,7 @@ def search_model(path_result, model_name, input_dim, x_dict, z_dict, z_set_name,
                   dict_model_load=dict_model_load,
                   bool_train=bool_train, bool_test_ae=bool_test_ae,
                   bool_save_ed=bool_save_ed, bool_test_ed=bool_test_ed,
-                  bool_num_padd=bool_num_padd, obj_padd_x=obj_padd_x, obj_padd_z=obj_padd_z
+                  bool_num_pad=bool_num_pad, obj_padd_x=obj_padd_x, obj_padd_z=obj_padd_z
                   )
     bool_clean_weight_file = kwargs['bool_clean_weight_file'] if 'bool_clean_weight_file' in kwargs.keys() else True
     if bool_clean_weight_file:
@@ -1156,7 +1190,7 @@ def search_model(path_result, model_name, input_dim, x_dict, z_dict, z_set_name,
     if bool_test_weight:
         bool_test_ae_w = kwargs['bool_test_ae_w'] if 'bool_test_ae_w' in kwargs.keys() else False
         bool_test_ed_w = kwargs['bool_test_ed_w'] if 'bool_test_ed_w' in kwargs.keys() else True
-        if bool_num_padd:
+        if bool_num_pad:
             x_dict = obj_padd_x.padd_data()
         test_weight_ae(dict(zip(z_dict.keys(), x_dict.values())), n_encoder_layer=n_encoder_layer,
                        path_save=path_save, paras=paras, dict_model_load=dict_model_load,
@@ -1327,6 +1361,16 @@ if __name__ == '__main__':
             # Multiple-Decoder RNN TasNet without mask
             search_model(PATH_RESULT, 'model_13_2_1', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
                          **{'i': lr_i, 'j': lr_j, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                             'n_conv_encoder': 1, 'n_filters_conv': 64,
+                             'block_type': 'BLSTM', 'latent_dim': 200,
+                             'n_block_encoder': 1, 'n_block_decoder': 1,
+                             'model_type': 'ae', 'is_multiple_decoder': True, 'use_mask': False, 'n_outputs': 1,
+                             'bool_train': True, 'bool_test_ae': True,
+                             'bool_save_ed': True, 'bool_test_ed': True,
+                             'bool_clean_weight_file': True, 'bool_test_weight': True})
+
+            search_model(PATH_RESULT, 'model_13_2_1_2', input_dim_j, data_dict_j, data_dict_j, s_names_j[0][:-6],
+                         **{'i': lr_i, 'j': lr_j, 'epochs': 200, 'batch_size': 8, 'bs_pred': 8,
                              'n_conv_encoder': 1, 'n_filters_conv': 64,
                              'block_type': 'BLSTM', 'latent_dim': 200,
                              'n_block_encoder': 1, 'n_block_decoder': 1,

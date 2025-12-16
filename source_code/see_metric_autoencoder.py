@@ -83,7 +83,7 @@ def display_metric(metric_list, path_save, set_name, hist_bins=None, save_name=N
     if hist_bins is None:
         value_min = min([min(metric_i) for metric_i in metric_list])
         value_max = max([max(metric_i) for metric_i in metric_list])
-        hist_bins = (value_min, value_max, 10)
+        hist_bins = (float(value_min), float(value_max), 10)
     dm_object = DisplayMetric(None, None, path_save)
     dm_object.display_static_metrics(metric_list, set_name, ['violin', 'hist'],
                                      hist_bins=hist_bins, save_name=save_name)
@@ -135,7 +135,8 @@ def compute_sdr(s_list, sp_list, path_metric, file_name, set_name, hist_bins=Non
     return metric_list, metric_mean_list
 
 
-def compute_si_sdr(s_list, sp_list, scaling, path_metric, file_name, set_name, hist_bins=None, save_name=None):
+def compute_si_sdr(s_list, sp_list, scaling, path_metric, file_name, set_name, hist_bins=None, save_name=None,
+                   compute_permutation=False):
     """Compute and save si_sdr sd_sdr related metrics.
     Args:
         s_list (list[np.ndarray,shape==(n_src,n_sams,n_channel=1,fl)]): list of target data.
@@ -146,6 +147,7 @@ def compute_si_sdr(s_list, sp_list, scaling, path_metric, file_name, set_name, h
         set_name (list[str]): name of the sources, e.g. ['s_1', 's_2', 's_3'].
         hist_bins (tuple(float, float, int), optional): paras for hist. Defaults to None.
         save_name (str, optional): for name to save. Defaults to None.
+        compute_permutation (bool): compute the best metric after permutation.
     Returns:
         metric_list (list[np.ndarray]): [metric](n_src, n_sams), list of metric.
         metric_mean (list[np.ndarray]): [metric], list of mean metric.
@@ -166,7 +168,7 @@ def compute_si_sdr(s_list, sp_list, scaling, path_metric, file_name, set_name, h
     sar_arr = np.empty((n_sams, n_src), dtype=np.float32)
 
     for j, (s_j, sp_j) in enumerate(zip(s_arr, sp_arr)):
-        si_sdr_class = ScaleInvariantSDR(s_j, sp_j, scaling=scaling)
+        si_sdr_class = ScaleInvariantSDR(s_j, sp_j, scaling=scaling, compute_permutation=compute_permutation)
         score_dict = si_sdr_class.evaluate()
         scores = [value for key, value in score_dict.items()][1:]
         for k, score in enumerate(scores):

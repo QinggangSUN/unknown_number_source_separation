@@ -26,6 +26,7 @@ _SR = 52734
 _IS_MONO = True
 _FRAME_LENGTH = 10547  # ~200ms 10546.800 000 000 001
 _FRAME_SHIFT = 10547
+_SAMPLE_RATE = 52734  # resample to new sample rate
 
 
 def get_sr():
@@ -46,6 +47,11 @@ def get_fl():
 def get_fs():
     """Return const global variable _FRAME_SHIFT."""
     return _FRAME_SHIFT
+
+
+def get_sample_rate():
+    """Return const global variable _SAMPLE_RATE."""
+    return _SAMPLE_RATE
 
 
 # output mix features
@@ -628,6 +634,8 @@ def compute_chunk_size(data, chunk_type, dims=None):
         for dim_i in dims:
             chunk_size[dim_i] = 1
         chunk_size = tuple(chunk_size)
+    else:
+        raise ParameterError(f'unsupported chunk_type {chunk_type}')
     return chunk_size
 
 
@@ -949,7 +957,7 @@ def save_process_batch(data, func, path_save, file_name, batch_num=200, save_key
                        chunk_type='back_dim', *args, **kwargs):
     """Process data by batch through func, save to path_save.
     Args:
-        data (np.ndarray,shape==(nsam, - - )): data to save
+        data (np.ndarray,shape==(nsam, - - ) / list[np.ndarray]): data to save
         func (function): function to process data
         path_save (str): where to save data
         file_name (str): name of the saved file
@@ -1062,6 +1070,8 @@ def concat_h5py(fname_1, fname_2, fname_new, create_h5py=False, axis=0, save_key
                 data_j = data_2[j:j_end]
             elif axis == 1:
                 data_j = data_2[:, j:j_end]
+            else:
+                raise ParameterError(f'unsupported axis {axis}')
 
             with h5py.File(fname_new, 'a') as f_a:
                 f_a[save_key].resize(
@@ -1075,7 +1085,7 @@ def concat_h5py(fname_1, fname_2, fname_new, create_h5py=False, axis=0, save_key
 
 
 def create_frame_info(wav_file_names, num_frames, src_name):
-    assert(len(wav_file_names) == len(num_frames))
+    assert (len(wav_file_names) == len(num_frames))
     info_list = []
     index_src = 0
     for wav_file_name, num_frame in zip(wav_file_names, num_frames):
@@ -1093,7 +1103,6 @@ def data_seg_create(path_class):
     Args:
         path_class (object class PathSourceRoot): object of class to compute path.
     """
-
     import json
     import numpy as np
     from feature_extract import feature_extract
@@ -1335,6 +1344,8 @@ class SpectrumCreate(object):
                     sources, kwargs['sr'], kwargs['n_mels'],
                     path_class_out.get_win_length(),
                     path_class_out.get_hop_length(), mode=mode)
+            else:
+                raise ParameterError(f'unsupported mode {mode}')
         elif form_src == 'mfcc':
             mode = 0 if 'mode' not in kwargs.keys() else kwargs['mode']
             if mode == 0:  # input wavmats
@@ -1345,10 +1356,12 @@ class SpectrumCreate(object):
             elif mode == 1:  # input log-power Mel spectrogram
                 feature = self.mfcc_create(
                     sources, kwargs['sr'], kwargs['n_mfcc'], mode=mode)
+            else:
+                raise ParameterError(f'unsupported mode {mode}')
         elif form_src == 'demon':
             feature = self.demon_create(sources, **kwargs)
         else:
-            raise ParameterError('Invalid feature')
+            raise ParameterError(f'Invalid feature {form_src}')
         return feature
 
 

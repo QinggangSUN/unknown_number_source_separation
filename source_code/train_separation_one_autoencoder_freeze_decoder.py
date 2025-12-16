@@ -57,10 +57,12 @@ def build_freeze_decoder_model(num_model, input_dim, path_weight_decoder_files, 
     n_outputs = kwargs['n_outputs'] if 'n_outputs' in kwargs.keys() else None  # 4
     assert n_outputs == len(path_weight_decoder_files)
 
-    if num_model in (1, 15, 21):
-        n_no_para_decoder_layer = -0
+    if num_model in (1, 15):
+        n_no_para_decoder_layer = 0
     elif num_model in (8, 9, 13):
         n_no_para_decoder_layer = -2
+    elif num_model in (21, ):
+        n_no_para_decoder_layer = -1
 
     object_build_model = BuildModel(num_model, input_dim, **kwargs)
     autoencoder, _, n_encoder_layer, _ = object_build_model.build_model(**kwargs)
@@ -69,7 +71,11 @@ def build_freeze_decoder_model(num_model, input_dim, path_weight_decoder_files, 
     for i, path_weight_decoder_file_i in enumerate(path_weight_decoder_files):
         model_weight = load_model(path_weight_decoder_file_i, custom_objects=dict_model_load)
         logging.debug(f'model_decoder loaded \n {model_weight.summary()}')
-        for j, layer_j in enumerate(model_weight.layers[1:n_no_para_decoder_layer]):
+        if n_no_para_decoder_layer == 0:
+            model_weight_layers = model_weight.layers[1:]
+        else:
+            model_weight_layers = model_weight.layers[1:n_no_para_decoder_layer]
+        for j, layer_j in enumerate(model_weight_layers):
             num_ae_layer_j = n_encoder_layer+1+n_outputs*j+i
             autoencoder.layers[num_ae_layer_j].trainable = False
             logging.debug(f' model_autoencoder layer decoder {i} layer {j}')
@@ -356,8 +362,8 @@ def train_predict_ae(autoencoder, paras, x_dict, z_dict, path_save, dict_model_l
         bool_predict (bool, optional): whether predict ae model. Defaults to True.
     """
     modelname = kwargs['modelname'] if 'modelname' in kwargs.keys() else None
-    bool_num_padd = kwargs['bool_num_padd'] if 'bool_num_padd' in kwargs.keys() else False
-    if bool_num_padd:
+    bool_num_pad = kwargs['bool_num_pad'] if 'bool_num_pad' in kwargs.keys() else False
+    if bool_num_pad:
         batch_size = kwargs['batch_size']
         obj_padd_x = PadNumberSampleDict(x_dict, batch_size)
         obj_padd_z = PadNumberSampleDict(z_dict, batch_size)
@@ -560,7 +566,7 @@ if __name__ == '__main__':
             search_model(PATH_RESULT, 'model_13_3_1', SRC_NAMES, x_dict_i, z_dict_i, None,
                          bool_train=True, bool_clean_weight_file=True, bool_predict=True,
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 200, 'batch_size': 8, 'bs_pred': 8,
-                            'bool_num_padd': True,
+                            'bool_num_pad': True,
                              'n_conv_encoder': 1, 'n_filters_conv': 64,
                              'block_type': 'dprnn', 'latent_dim': 200,
                              'n_block_encoder': 1, 'n_block_decoder': 1,

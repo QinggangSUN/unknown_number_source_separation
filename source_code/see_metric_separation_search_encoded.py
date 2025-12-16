@@ -105,7 +105,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                                 e.g. ['Z_0_zero',...,'Z_7_zero'].
         src_names_st (list[str]): [src], list of name of single target sources, e.g. ['Z_0_zero',...,'Z_3_zero'].
         s_data (list[h5pyFile]): [set](nsams, nsrc, channel=1, fl), file object of datas.
-        sm_index (list[tuple]): clean target source of mixed sources, e.g. [(1,2),...,(1,2,3)].
+        sm_index (list[tuple(int)]): clean target source of mixed sources, e.g. [(1,2),...,(1,2,3)].
         set_names (list[str]): list of names of sets, e.g. ['train', 'val', 'test'].
         zp_name_end (str): name of the predict file key word, e.g. 'decoded'.
         y_data (list[np.ndarray]): n_hot_labels of the samples.
@@ -295,7 +295,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                             si_snr_list, si_snr_mean = compute_metric(data_s_l_lj, data_sp_l_t, si_snr_np)
                             display_metric(si_snr_list, path_metric_l_lj, set_names,
-                                           # hist_bins=(0.6, 1.0, 40),
+                                           # hist_bins=(-40., 40., 40),
                                            save_name='si_snr')
                             save_metric(path_metric_l_lj, 'si_snr', ['si_snr_mean'], [np.asarray(si_snr_mean)],
                                         {'si_snr': dict(zip(set_names, si_snr_list))})
@@ -314,7 +314,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                                 data_s_n = np.expand_dims(data_s_n, -1)  # (n_sams, nsrc, fl, channel=1)
                             if data_sp_n.ndim == 3:
                                 data_sp_n = np.expand_dims(data_sp_n, -1)  # (n_sams, fl, nsrc, channel=1)
-                            data_sp_n = data_sp_n.transpose(0, 2, 1, 3)  # (n_sams, nsrc=4, fl, channel=1)
+                            data_sp_n = data_sp_n.transpose((0, 2, 1, 3))  # (n_sams, nsrc=4, fl, channel=1)
 
                             compute_sdr(data_s_n, data_sp_n, path_metric_i,
                                         [f'sdr_{set_name_n}', f'isr_{set_name_n}',
@@ -323,9 +323,9 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
                                         save_name=[f'sdr_{set_name_n}', f'isr_{set_name_n}',
                                                    f'sir_{set_name_n}', f'sar_{set_name_n}'])
 
-                            data_s_n = data_s_n.transpose(0, 2, 3, 1)
+                            data_s_n = data_s_n.transpose((0, 2, 3, 1))
                             # (n_sams, n_src, fl, 1) -> (n_sams, fl, n_channel, n_src)
-                            data_sp_n = data_sp_n.transpose(0, 2, 3, 1)
+                            data_sp_n = data_sp_n.transpose((0, 2, 3, 1))
                             # (n_sams, n_src, fl, 1) -> (n_sams, fl, n_channel, n_src)
 
                             compute_si_sdr(data_s_n, data_sp_n, True, path_metric_i,
@@ -982,7 +982,7 @@ def compute_metrics_sum(object_decoded_files, x_data, set_names, z_src_pred_name
 
                 si_snr_list, si_snr_mean = compute_metric(data_s_k, data_sp_k, si_snr_np)
                 display_metric(si_snr_list, path_metrics_para_two, set_names,
-                               # hist_bins=(0.6, 1.0, 40),
+                               # hist_bins=(-40., 40., 40),
                                save_name='si_snr')
                 save_metric(path_metrics_para_two, 'si_snr', ['si_snr_mean'], [np.asarray(si_snr_mean)],
                             {'si_snr': dict(zip(set_names, si_snr_list))})

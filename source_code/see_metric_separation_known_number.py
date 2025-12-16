@@ -159,7 +159,7 @@ def metrics_to_files(path_metrics, src_names, sm_index, set_names):  # [source][
     Args:
         path_metrics (list[list[str]]): [source][model], path of metric dirs.
         src_names (list[str]): list of name of sources including mixed sources, e.g. ['Z_0_ns',...,'Z_7_ns'].
-        sm_index (list[tuple]): clean target source of mixed sources, e.g. [(1, 2),...,(1,2,3)].
+        sm_index (list[tuple(int)]): clean target source of mixed sources, e.g. [(1, 2),...,(1,2,3)].
         set_names (list[str]): list of names of sets, e.g. ['train', 'val', 'test'].
     """
     sm_names = [[src_names[k] for k in sm_index_i] for sm_index_i in sm_index]  # [source][src]

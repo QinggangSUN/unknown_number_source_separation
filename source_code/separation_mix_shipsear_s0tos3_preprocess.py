@@ -155,6 +155,8 @@ def z_sets_create(x_sets_shape, nums, n_src, z_labels, x_source_frames, output_z
             elif output_zero == 'epsi':
                 z_si = np.full(
                     x_sets_shape[si][0:1] + (n_src,) + x_sets_shape[si][1:], epsi, dtype=np.float32)
+            else:
+                raise ParameterError(f'unsupported output_zero {output_zero}')
             for pi, pair_i in enumerate(nums_i):  # [n_samples](sourcei, numi) # pylint: disable=invalid-name
                 label_i = z_labels[pair_i[0]]
                 for lj in range(label_i.shape[0]):  # pylint: disable=invalid-name
@@ -169,7 +171,8 @@ def z_sets_create(x_sets_shape, nums, n_src, z_labels, x_source_frames, output_z
                 elif output_zero == 'epsi':
                     z_si_pi = np.full(
                         (1, n_src,) + x_sets_shape[si][1:], epsi, dtype=np.float32)
-
+                else:
+                    raise ParameterError(f'unsupported output_zero {output_zero}')
                 label_i = z_labels[pair_i[0]]
                 for lj in range(label_i.shape[0]):  # pylint: disable=invalid-name
                     if label_i[lj] == 1:
@@ -305,7 +308,8 @@ def standar_feature(data, dim_target, min_shape=32):
         data_standard = np.asarray(data).transpose((0, 2, 1))  # (n_samples, fl, 1)
     elif dim_target == 2:  # only for 2D network input
         data_standard = np.expand_dims(np.asarray(data), -1)  # (n_samples, t, fl, 1)
-
+    else:
+        raise ParameterError(f'unsupported dim_target {dim_target}')
     if min_shape > 0 and dim_target == 2:  # only for 2D input padding, input size must >= (32, 32, 1)
         d1 = data_standard.shape[1]  # (n_samples, t, fl, 1)
         d2 = data_standard.shape[2]

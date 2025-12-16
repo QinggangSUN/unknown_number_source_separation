@@ -21,8 +21,8 @@ def samerate_acc_stabilizer_np(y_true, y_pred, epsi=1e-8):
     p_p = np.dot(y_pred, y_pred)
     t_t = np.dot(y_true, y_true)
     numerator = np.abs(p_t)
-    denominator = np.sqrt(p_p*t_t)+epsi
-    same_rate = numerator/denominator
+    denominator = np.sqrt(p_p * t_t) + epsi
+    same_rate = numerator / denominator
     return same_rate
 
 
@@ -36,7 +36,7 @@ def samerate_acc_np(y_true, y_pred):
     t_t = np.dot(y_true, y_true)
     numerator = np.abs(p_t)
     denominator = np.sqrt(p_p * t_t)
-    same_rate = numerator/denominator
+    same_rate = numerator / denominator
 
     # return np.abs(np.dot(y_pred, y_true))/np.sqrt(np.dot(y_pred, y_pred)*np.dot(y_true, y_true))
     return same_rate
@@ -50,7 +50,7 @@ def si_snr_stabilizer_np(y_true, y_pred, epsi=1e-8):
         Separation Data?. ICASSP 2021. https://doi.org/10.1109/ICASSP39728.2021.9414774.
     """
     rho = samerate_acc_stabilizer_np(y_true, y_pred, epsi)
-    si_snr = 10 * np.log10((rho**2+epsi)/(1-rho**2+epsi))
+    si_snr = 10 * np.log10((rho ** 2 + epsi) / (1 - rho ** 2 + epsi))
 
     return si_snr
 
@@ -63,7 +63,7 @@ def si_snr_np(y_true, y_pred):
         Separation Data?. ICASSP 2021. https://doi.org/10.1109/ICASSP39728.2021.9414774.
     """
     rho = samerate_acc_np(y_true, y_pred)
-    si_snr = 10 * np.log10(rho**2/(1-rho**2))
+    si_snr = 10 * np.log10(rho ** 2 / (1 - rho ** 2))
 
     return si_snr
 
@@ -72,8 +72,7 @@ def mse_np(y_true, y_pred):
     """MSE using numpy."""
     y_true = np.squeeze(y_true)
     y_pred = np.squeeze(y_pred)
-    square_errors = np.square(y_true-y_pred)  # pylint:disable=assignment-from-no-return
+    square_errors = np.square(y_true - y_pred)  # pylint:disable=assignment-from-no-return
     mse = np.mean(square_errors)  # pylint:disable=unused-variable
-
     # return np.square(np.subtract(y_true, y_pred)).mean()
     return mse

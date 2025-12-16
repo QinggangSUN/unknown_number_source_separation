@@ -9,7 +9,6 @@ E-mail: sun10qinggang@163.com
 Implement of CBIR training strategy in following article:
     H. Kim and J. W. Shin, “On Training Speech Separation Models With Various Numbers of Speakers,” IEEE Signal Process.
     Lett., vol. 30, pp. 1202–1206, 2023, doi: 10.1109/LSP.2023.3310881.
-
 """
 # pylint: disable=line-too-long, logging-fstring-interpolation
 # pylint: disable=too-many-arguments, too-many-branches, too-many-lines, too-many-locals, too-many-statements
@@ -234,7 +233,7 @@ if __name__ == '__main__':
                             'user_metrics_name': ['loss_kim_keras'],
                             'user_metrics_func': [loss_kim],
                             'dict_model_load': dict_model_load,
-                            'bool_num_padd': True,
+                            'bool_num_pad': True,
                             'bool_train': True, 'bool_test_ae': False,
                             'bool_save_ed': False, 'bool_test_ed': False,
                             'bool_clean_weight_file': True, 'bool_test_weight': True,
@@ -251,7 +250,7 @@ if __name__ == '__main__':
                             'user_metrics_name': ['loss_kim_keras'],
                             'user_metrics_func': [loss_kim],
                             'dict_model_load': dict_model_load,
-                            'bool_num_padd': True,
+                            'bool_num_pad': True,
                             'is_multiple_decoder': True, 'use_mask': False,
                             'bool_train': True, 'bool_test_ae': False,
                             'bool_save_ed': False, 'bool_test_ed': False,
@@ -272,7 +271,7 @@ if __name__ == '__main__':
                             'user_metrics_name': ['loss_kim_keras'],
                             'user_metrics_func': [loss_kim],
                             'dict_model_load': dict_model_load,
-                            'bool_num_padd': True,
+                            'bool_num_pad': True,
                             'bool_train': True, 'bool_test_ae': False,
                             'bool_save_ed': False, 'bool_test_ed': False,
                             'bool_clean_weight_file': True, 'bool_test_weight': True,
@@ -291,7 +290,7 @@ if __name__ == '__main__':
                             'user_metrics_name': ['loss_kim_keras'],
                             'user_metrics_func': [loss_kim],
                             'dict_model_load': dict_model_load,
-                            'bool_num_padd': True,
+                            'bool_num_pad': True,
                             'bool_train': True, 'bool_test_ae': False,
                             'bool_save_ed': False, 'bool_test_ed': False,
                             'bool_clean_weight_file': True, 'bool_test_weight': True,

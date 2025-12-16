@@ -769,12 +769,13 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
                    n_block_encoder, n_block_decoder, block_type, use_bias,
                    n_outputs, is_multiple_decoder, use_mask=True,
                    units_r=None, act_r=None, use_ln_decoder=False, model_type='separator', encoder_multiple_out=None,
-                   batch_size=None, output_activation=None,
+                   batch_size=None, output_activation=None, encoder_mo_type=None,
                    ):
     """Tasnet or Encoder-Decoder Networks with Dprnn, BLSTM, LSTM.
-        LUO Y, CHEN Z, YOSHIOKA T. Dual-Path RNN: Efficient Long Sequence Modeling for Time-Domain Single-Channel Speech Separation[C/OL]
-        //ICASSP 2020 - 2020 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP). Barcelona, Spain: IEEE, 2020: 46-50.
-        https://ieeexplore.ieee.org/document/9054266/. DOI:10.1109/ICASSP40776.2020.9054266.
+        LUO Y, CHEN Z, YOSHIOKA T. Dual-Path RNN: Efficient Long Sequence Modeling for Time-Domain Single-Channel Speech
+        Separation[C/OL] //ICASSP 2020 - 2020 IEEE International Conference on Acoustics, Speech and Signal Processing
+        (ICASSP). Barcelona, Spain: IEEE, 2020: 46-50. https://ieeexplore.ieee.org/document/9054266/.
+        DOI:10.1109/ICASSP40776.2020.9054266.
     Args:
         input_dim (int): dim of the input vector.
         n_pad_input (int): network input = input_dim + n_pad_input.
@@ -801,6 +802,7 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
             Defaults to False.
         batch_size (int, optional): batch size of the samples during training. Defaults to None.
         output_activation (str, optional): activation function of output layers. Defaults to None.
+        encoder_mo_type (str, None, optional): type of encoder multiple output layer. Defaults to None.
     """
     frame_length = input_dim + n_pad_input
     n_full_chunks = frame_length // chunk_size
@@ -877,13 +879,20 @@ def build_model_10(input_dim, n_pad_input, chunk_size, chunk_advance,
 
             if encoder_multiple_out:  # Trick, only use in separator modules
                 if block_type in {'BLSTM', 'LSTM'}:
-                    x = Dense(units=units_r, use_bias=use_bias,
-                              name=f'Dense_me_{i_branch}')(x)
+                    if encoder_mo_type == 'Dense':
+                        x = Dense(units=units_r, use_bias=use_bias, name=f'Dense_me_{i_branch}')(x)
+                    elif encoder_mo_type == 'Conv':
+                        x = Conv1D(units=units_r, use_bias=use_bias, name=f'Conv_me_{i_branch}')(x)
+                    else:
+                        raise ParameterError(f'Unsupported encoder_mo_type {encoder_mo_type}')
                 elif block_type in {'dprnn'}:
-                    x = Dense(units=n_filters_encoder, use_bias=use_bias,
-                              name=f'Dense_me_{i_branch}')(x)
-
-                logging.debug(f'first dense out {x}')  # (bs, time_step=329, units_r)
+                    if encoder_mo_type == 'Dense':
+                        x = Dense(units=n_filters_encoder, use_bias=use_bias, name=f'Dense_me_{i_branch}')(x)
+                    elif encoder_mo_type == 'Conv':
+                        x = Conv1D(units=n_filters_encoder, use_bias=use_bias, name=f'Conv_me_{i_branch}')(x)
+                    else:
+                        raise ParameterError(f'Unsupported encoder_mo_type {encoder_mo_type}')
+                logging.debug(f'encoder mo out {x}')  # (bs, time_step=329, units_r)
 
             for i_block in range(1, n_block_decoder + 1):
                 if block_type in {'BLSTM', 'LSTM'}:
@@ -1045,13 +1054,13 @@ def build_model_14(input_dim, n_pad_input,
                    n_block_encoder, n_block_decoder, n_layer_each_block, kernel_size, causal, norm_type,
                    n_outputs, is_multiple_decoder, use_residual=True, use_skip=True, use_sum_repeats=False,
                    use_mask=True, act_mask='sigmoid', output_activation=None, model_type='separator',
-                   encoder_multiple_out=False,
+                   encoder_multiple_out=False, encoder_mo_type=None,
                    ):
     # n_filters_encoder     N  = 512    Number of filters in autoencoder
     # kernel_size_encoder   L  =  16    Length of the filters (in samples)
     # n_channels_bottleneck B  = 128    Number of channels in bottleneck and the residual path's 1x1-conv block
     # n_channels_skip       Sc = 128    Number of channels in skip-connection paths' 1*1-conv blocks
-    # n_channels_conv       H  = 512    Number of channels in convolutional blocks
+    # n_channels_conv       H  = 512    Number of channels in convolutional blocks'
     # kernel_size           P  =   3    Kernel size in convolutional blocks
     # n_layer_each_block    X  =   8    Number of convolutional blocks in each repeat
     # n_repeats             R  =   3    Numner of repeats, n_repeats = n_block_encoder + n_block_decoder
@@ -1075,7 +1084,7 @@ def build_model_14(input_dim, n_pad_input,
     # True/False,        False,    False,      True/False,                True, -> False   no network (add inputs)
     # True/False,        False,    False,      True/False,               False, -> False   no network (add inputs)
     """Tasnet or Encoder-Decoder Networks with TCN (conv-TasNet).
-        LUO Y, MESGARANI N. Conv-tasnet: Surpassing ideal time�Cfrequency magnitude masking for speech separation[J].
+        LUO Y, MESGARANI N. Conv-tasnet: Surpassing ideal time–frequency magnitude masking for speech separation[J].
         IEEE/ACM transactions on audio, speech, and language processing, 2019, 27(8): 1256-1266.
     Args:
         input_dim (int): dim of the input vector.
@@ -1094,17 +1103,21 @@ def build_model_14(input_dim, n_pad_input,
         n_layer_each_block (int): X.
         kernel_size (int): P.
         causal (bool): whether support causal.
-        norm_type (str): type of normolization layers.
+        norm_type (str): type of normalization layers.
         n_outputs (int): number of output srcs.
         is_multiple_decoder (bool): whether the network is encoder - multiple decoder structure.
         use_residual (bool, optional): whether to use a 1x1-conv of residual path in TCN block. Defaults to True.
         use_skip (bool, optional): whether to use a 1x1-conv of skip-connection path in TCN block. Defaults to True.
-        use_sum_repeats (bool, optional): whether to use sums of skip-connection paths and residual path in each repeat. Defaults to False.
+        use_sum_repeats (bool, optional): whether to use sums of skip-connection paths and residual path in each repeat.
+            Defaults to False.
         use_mask (bool, optional): whether multiple mask with encoded vector. Defaults to True.
         act_mask (str, optional): type of activation of mask layer. Defaults to 'sigmoid'.
-        output_activation (str, optional): activation function of output layers. Defaults to None which equal to "linear".
+        output_activation (str, optional): activation function of output layers. Defaults to None
+            which equal to "linear".
         model_type (str, optional): trick, the model used for separator or autoencoder. Defaults to 'separator'.
-        encoder_multiple_out (bool): trick, for module train_separation_one_autoencoder_freeze_decoder. Defaults to False.
+        encoder_multiple_out (bool): whether to use extra dense layers for separator.
+            Defaults to False.
+        encoder_mo_type (str, None, optional): type of encoder multiple output layer. Defaults to None.
     """
     frame_length = input_dim
 
@@ -1181,8 +1194,14 @@ def build_model_14(input_dim, n_pad_input,
                 decoded_src_i = x
 
                 if encoder_multiple_out:  # Trick, only use in separator modules
-                    decoded_src_i = Dense(units=n_channels_bottleneck, use_bias=use_bias,
-                                          name=f'Dense_me_{i_branch}')(decoded_src_i)
+                    if encoder_mo_type == 'Dense':
+                        decoded_src_i = Dense(units=n_channels_bottleneck, use_bias=use_bias,
+                                              name=f'Dense_me_{i_branch}')(decoded_src_i)
+                    elif encoder_mo_type == 'Conv':
+                        decoded_src_i = Conv1D(units=n_channels_bottleneck, use_bias=use_bias,
+                                               name=f'Conv_me_{i_branch}')(decoded_src_i)
+                    else:
+                        raise ParameterError(f'Unsupported encoder_mo_type {encoder_mo_type}')
                     logging.debug(f'first dense out {decoded_src_i}')  # (bs, fl=10547, n_channels_conv=64)
 
                 if n_block_decoder > 0:
@@ -1307,11 +1326,11 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
                    num_layers=12, num_initial_filters=24, kernel_size=15, use_bias=True, merge_filter_size=5,
                    output_filter_size=1, padding="same", context=False, upsampling_type="learned", batch_norm=False,
                    output_activation="linear", output_type="difference", use_skip=True, model_type='separator',
-                   encoder_multiple_out=False):
+                   encoder_multiple_out=False, encoder_mo_type=None):
     """Autoencoder or Encoder - Multiple Decoder networks with Wave-U-Net structure.
     STOLLER D, EWERT S, DIXON S. Wave-U-Net: A multi-scale neural network for end-to-end audio source separation[C]
-    //19th International Society for Music Information Retrieval Conference, ISMIR 2018, September 23, 2018 - September 27, 2018.
-    Paris, France: International Society for Music Information Retrieval, 2018: 334-340.
+    //19th International Society for Music Information Retrieval Conference, ISMIR 2018, September 23, 2018 - September
+    27, 2018. Paris, France: International Society for Music Information Retrieval, 2018: 334-340.
     Args:
         input_dim (int): dim of the input vector.
         n_pad_input (int): network input = input_dim + n_pad_input.
@@ -1323,7 +1342,8 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
         kernel_size (int, optional): Kernel size in convolutional layers. Defaults to 15.
         use_bias (bool): whether to use bias in all neurons.
         merge_filter_size (int, optional): Kernel size in convolutional layers after concat layers. Defaults to 5.
-        output_filter_size (int, optional): number of filters of convolutional layers before output layers. Defaults to 1.
+        output_filter_size (int, optional): number of filters of convolutional layers before output layers.
+            Defaults to 1.
         padding (str, optional): padding type of convolutional layers. Defaults to "same".
         context (bool, optional): shape in bilinear interpolation resize layers. Defaults to False.
         upsampling_type (str, optional): type of up-sampling layers. Defaults to "learned".
@@ -1332,8 +1352,10 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
         output_type (str, optional): type of output layer. Defaults to "difference".
         use_skip (bool, optional): whether using skip connection layers. Defaults to True.
         model_type (str, optional): trick, the model used for separator or autoencoder. Defaults to 'separator'.
-        encoder_multiple_out (bool, optional): trick, for module train_separation_one_autoencoder_freeze_decoder. Defaults to False.
-    """
+        encoder_multiple_out (bool, optional): whether to use extra dense layers for separator.
+            Defaults to False.
+        encoder_mo_type (str, None, optional): type of encoder multiple output layer. Defaults to None.
+   """
 
     # `enc_outputs` stores the downsampled outputs to re-use during upsampling.
     enc_outputs = []
@@ -1460,10 +1482,18 @@ def build_model_20(input_dim, n_pad_input, n_outputs, is_multiple_decoder, num_c
                 decoded_src_i = X
 
                 if encoder_multiple_out:  # Trick, only use in separator modules
-                    decoded_src_i = Dense(units=num_initial_filters + (num_initial_filters * num_layers),
-                                          use_bias=use_bias,
-                                          name=f'Dense_me_{i_branch}')(decoded_src_i)
-                    logging.debug(f'first dense out {decoded_src_i}')  # (bs, fl=10547, n_channels_conv=64)
+                    if encoder_mo_type == 'Dense':
+                        decoded_src_i = Dense(units=num_initial_filters + (num_initial_filters * num_layers),
+                                              use_bias=use_bias,
+                                              name=f'Dense_me_{i_branch}')(decoded_src_i)
+                    elif encoder_mo_type == 'Conv':
+                        decoded_src_i = Conv1D(units=num_initial_filters + (num_initial_filters * num_layers),
+                                               use_bias=use_bias,
+                                               name=f'Conv_me_{i_branch}')(decoded_src_i)
+                    else:
+                        raise ParameterError(f'Unsupported encoder_mo_type {encoder_mo_type}')
+
+                    logging.debug(f'encoder mo out {decoded_src_i}')  # (bs, fl=10547, n_channels_conv=64)
 
                 decoded_src_i = decoder_block(decoded_src_i, num_layers, use_skip, i_branch=i_branch)
                 decoded_src_i = Conv1D(num_channels, output_filter_size, use_bias=use_bias,

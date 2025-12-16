@@ -31,7 +31,7 @@ else:
     import keras
     from keras import backend as K
 from keras import optimizers
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import ModelCheckpoint, TensorBoard, Callback
 
 if keras.__version__ >= '2.3.1':
     from keras.layers import LayerNormalization
@@ -54,6 +54,7 @@ from see_metric_single_source_ae_ns import ListDecodedFiles
 from train_functions import output_history, save_model_struct
 from train_single_source_autoencoder_ns import build_dict_model_load, compute_num_model, clear_model_weight_file
 from train_single_source_autoencoder_ns import predict_autoencoder
+from train_single_source_autoencoder_ns import EpochTimeCallback, tf2_get_keras_flops
 
 
 def create_decoder_weight_model(decoder_model=None, path_save_model=None, auto_model_name=None,
@@ -126,7 +127,7 @@ def test_predict_decoder(data_set_encoder, decoder_model, path_save, name_data_s
     if not isinstance(name_data_set_decoded, list):
         name_data_set_decoded = [name_data_set_decoded]
 
-    for data_set, name_data_decoded in zip(data_set_encoder, name_data_set_decoded):
+    for (data_set, name_data_decoded) in zip(data_set_encoder, name_data_set_decoded):
         if os.path.isfile(os.path.join(path_save, f'{name_data_decoded}.hdf5')):
             name_data_decoded += '_test'
         predict_autoencoder(decoder_model, data_set, path_save, name_data_decoded, compile_model=True,
@@ -269,6 +270,8 @@ def build_model_search(n_outputs, encoded_shape, model_sub_decoders):
             tensor_slice = tensor[:, index_channel, :, :]
         elif rank_tensor == 5:
             tensor_slice = tensor[:, index_channel, :, :, :]
+        else:
+            raise ParameterError(f'unsupported rank_tensor {rank_tensor}')
         return tensor_slice
 
     input_frames = Input(shape=(n_outputs, 1))
@@ -568,7 +571,7 @@ def build_model_14_search(encoded_shape, path_weight_decoder_files, dict_model_l
         n_channels_bottleneck (int): B.
         n_channels_skip (int): Sc.
         n_block_decoder (int): number of the TCN blocks in decoder layers.
-        n_layer_each_block (int): X.
+        n_layer_each_block (int): X.number of the layers in each block.
         kernel_size (int): P.
         causal (bool): whether support causal.
         norm_type (str): type of normalization layers.
@@ -793,6 +796,8 @@ def train_model_search(z_dict, paras, path_save, modelname=None,
             optimizer = optimizers.Adam(lr=learn_rate)
         elif optimizer_type == 'sgd':
             optimizer = optimizers.SGD(lr=learn_rate, decay=1e-6, momentum=0.9, nesterov=True)
+        else:
+            raise ParameterError(f'unsupported optimizer_type {optimizer_type}')
 
         z_train_j = np.expand_dims(np.asarray(z_train_j), axis=0)
         dummy_input = np.ones(tuple(K.int_shape(model.inputs[0])[1:2]) + (1,))
@@ -802,12 +807,19 @@ def train_model_search(z_dict, paras, path_save, modelname=None,
         check_filename = os.path.join(path_check_j, f'weights_{modelname}' + '_{epoch:02d}_{loss:.2f}.hdf5')
         checkpoint = ModelCheckpoint(filepath=check_filename, monitor='loss', mode='auto',
                                      verbose=1, period=1, save_best_only=True)
+        epoch_time_callback = EpochTimeCallback()
         history = model.fit(x=x_train_j,
                             y=z_train_j,
                             epochs=epochs,
                             batch_size=batch_size,
                             # callbacks=[TensorBoard(log_dir=path_board), checkpoint])  # huge space
-                            callbacks=[checkpoint])
+                            callbacks=[checkpoint, epoch_time_callback])
+
+        epoch_times = epoch_time_callback.times
+        train_logs_dict = dict()
+        train_logs_dict.update({'epoch_times': epoch_times})
+        train_logs_dict.update({'FLOPs': tf2_get_keras_flops(model)})
+        save_datas(train_logs_dict, path_check_j, form_save='json', file_name='train_logs')
 
         path_save_history = os.path.join(path_save, 'loss_search')
         mkdir(path_save_history)
@@ -959,6 +971,8 @@ def search_best_model(path_result_root, src_names,
         """
         if num_model in (1, 8, 12, 13, 15, 21):
             weight_layer_index = tuple(range(2 * n_outputs + 1, 3 * n_outputs + 1))
+        else:
+            raise ParameterError(f'unsupported num_model {num_model}')
         return weight_layer_index
 
     if path_result_model is None:
@@ -1220,7 +1234,7 @@ if __name__ == '__main__':
     PATH_RESULT = '../result_separation_ae_ns_single'
     mkdir(PATH_RESULT)
 
-    lr_i_j = [(i, j) for i in range(1, 2) for j in range(4, -7, -1)]
+    lr_i_j = [(i, j) for i in range(1, 2) for j in range(0, -5, -1)]
     for (lr_i, lr_j) in lr_i_j:
         for x_name_j, x_data_j in X_DICT.items():
             # ------------------------------------------------------------------------------------------------------- #

@@ -178,8 +178,7 @@ def metric_hdf5_to_df(n_src, path_result, names_inputs, names_channels, names_ta
     metric_df = pd.DataFrame(metric_dict)
     if path_save:
         metric_df.to_json(os.path.join(path_save, f'figure_table_{table_num}_{metric_key}_{name_set}.json'))
-        # metric_df_read = pd.read_json(os.path.join(path_save,
-        #                                            f'figure_table_{table_num}_{metric_key}_{name_set}.json'))
+        # metric_df_read = pd.read_json(os.path.join(path_save, f'figure_table_{table_num}_{metric_key}_{name_set}.json'))
         # metric_df_read_values = metric_df_read['metric'].values
 
     return metric_df
@@ -268,31 +267,37 @@ if __name__ == '__main__':
     names_inputs_1, names_channels_1, names_targets_1 = create_table_1_names(names_sources, n_src)
 
     path_result_root = '../results'
-    info_list = [{'path': f'{path_result_root}/Known Number/model_13_3_1_lr1e-3_ep300/metric', 'name_para': '1_n3_300',
-                  'algorithm_type': 0, 'model_type': 'DPRNN-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Known Number/model_15_2_6_lr1e-3_ep200/metric', 'name_para': '1_n3_200',
-                  'algorithm_type': 0, 'model_type': 'Conv-TasNet-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Known Number/model_21_6_10_lr1e-3_ep800/metric', 'name_para': '1_n3_800',
-                  'algorithm_type': 0, 'model_type': 'Wave-U-Net-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 1/model_13_3_1_lr1e-3_ep100/metric/1_n3_100',
-                  'algorithm_type': 1, 'model_type': 'DPRNN-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 1/model_15_2_6_lr1e-3_ep200/metric/1_n3_200',
-                  'algorithm_type': 1, 'model_type': 'Conv-TasNet-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 1/model_21_6_10_lr1e-4_ep800/metric/1_n4_800',
-                  'algorithm_type': 1, 'model_type': 'Wave-U-Net-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 2/model_13_2_1_lr1e-3_ep100/metric/best_sum_mse',
-                  'algorithm_type': 2, 'model_type': 'BLSTM-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 2/model_15_2_6_lr1e-3_ep200_tanh_noNL/metric/best_sum_mse',
-                  'algorithm_type': 2, 'model_type': 'Conv-TasNet-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 2/model_21_6_10_lr1e-4_ep1600/metric/best_sum_mse',
-                  'algorithm_type': 2, 'model_type': 'Wave-U-Net-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 3/model_13_3_1_lr1e-3_ep200/model_lr1e-3_ep200/metric/1_n3_200',
-                  'algorithm_type': 3, 'model_type': 'DPRNN-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 3/model_15_2_6_lr1e-3_ep200/model_lr1e-3_ep200/metric/1_n3_200',
-                  'algorithm_type': 3, 'model_type': 'Conv-TasNet-MD', 'way': 0},
-                 {'path': f'{path_result_root}/Algorithm 3/model_21_6_10_lr1e-4_ep1600/model_lr1e-4_ep800/metric/1_n4_800',
-                  'algorithm_type': 3, 'model_type': 'Wave-U-Net-MD', 'way': 0}
-                 ]
+    info_list = [
+        {'path': f'{path_result_root}/Known Number/model_13_2_1_lr1e-4_ep200/metric', 'name_para': '1_n4_200',
+         'algorithm_type': 0, 'model_type': 'BLSTM-MD', 'way': 0},
+        {'path': f'{path_result_root}/Known Number/model_13_3_1_lr1e-3_ep300/metric', 'name_para': '1_n3_300',
+         'algorithm_type': 0, 'model_type': 'DPRNN-MD', 'way': 0},
+        {'path': f'{path_result_root}/Known Number/model_15_2_6_lr1e-3_ep200/metric', 'name_para': '1_n3_200',
+         'algorithm_type': 0, 'model_type': 'Conv-TasNet-MD', 'way': 0},
+        {'path': f'{path_result_root}/Known Number/model_21_6_10_lr1e-3_ep800/metric', 'name_para': '1_n3_800',
+         'algorithm_type': 0, 'model_type': 'Wave-U-Net-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 1/model_13_2_1_lr1e-4_ep200/metric/1_n4_200',
+         'algorithm_type': 1, 'model_type': 'BLSTM-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 1/model_13_3_1_lr1e-3_ep100/metric/1_n3_100',
+         'algorithm_type': 1, 'model_type': 'DPRNN-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 1/model_15_2_6_lr1e-3_ep200/metric/1_n3_200',
+         'algorithm_type': 1, 'model_type': 'Conv-TasNet-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 1/model_21_6_10_lr1e-4_ep800/metric/1_n4_800',
+         'algorithm_type': 1, 'model_type': 'Wave-U-Net-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 2/model_13_2_1_lr1e-3_ep100/metric/best_sum_mse',
+         'algorithm_type': 2, 'model_type': 'BLSTM-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 2/model_15_2_6_lr1e-3_ep200_tanh_noNL/metric/best_sum_mse',
+         'algorithm_type': 2, 'model_type': 'Conv-TasNet-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 2/model_21_6_10_lr1e-4_ep1600/metric/best_sum_mse',
+         'algorithm_type': 2, 'model_type': 'Wave-U-Net-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 3/model_13_2_1_lr1e-3_ep200/model_lr1e-4_ep200/metric/1_n4_200',
+         'algorithm_type': 3, 'model_type': 'BLSTM-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 3/model_13_3_1_lr1e-3_ep200/model_lr1e-3_ep200/metric/1_n3_200',
+         'algorithm_type': 3, 'model_type': 'DPRNN-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 3/model_15_2_6_lr1e-3_ep200/model_lr1e-3_ep200/metric/1_n3_200',
+         'algorithm_type': 3, 'model_type': 'Conv-TasNet-MD', 'way': 0},
+        {'path': f'{path_result_root}/Algorithm 3/model_21_6_10_lr1e-4_ep1600/model_lr1e-4_ep800/metric/1_n4_800',
+         'algorithm_type': 3, 'model_type': 'Wave-U-Net-MD', 'way': 0}]
 
     display_metric_mse = DisplayMetric(info_list)
     metrics_df = display_metric_mse.import_data_to_df(n_src, names_inputs_1, names_channels_1, names_targets_1, 'mse',

@@ -10,6 +10,7 @@ E-mail: sun10qinggang@163.com
 
 import os
 import numpy as np
+import pandas as pd
 
 from prepare_data_shipsear_recognition_mix_s0tos3 import read_data, save_datas
 
@@ -63,22 +64,53 @@ def compute_num_active_matrices(object_decoded_files,
                            **{'form_save': 'csv'})
 
 
+def load_metric(path_result_root, metric_names=('avg_oracle_si_snr', 'p_si_snr'), set_names=('train', 'val', 'test'),
+                penalty_reward_pairs=((20., 0.), (20., 20.), (30., 0.), (30., 30.), (None, 0.))):
+    """extract outputs from keras predict file.
+    Args:
+        path_result_root (str): path where result file saved.
+        metric_names (str): names of the metrics.
+        set_names (tuple(str)): tuple of names of sets, e.g. ('train', 'val', 'test').
+        penalty_reward_pairs (tuple(tuple(float))): param pairs of penalty and reward.
+    """
+    for metric_name in metric_names:
+        metric_params = []
+        for penalty_reward_pair in penalty_reward_pairs:
+            penalty, reward = penalty_reward_pair
+            metric_param = f'penalty_{penalty}_reward_{reward}'
+            metric_params.append(metric_param)
+        metric_dict = {metric_name: metric_params}
+
+        for set_name in set_names:
+            metric_dict.update({set_name: []})
+        for penalty_reward_pair in penalty_reward_pairs:
+            penalty, reward = penalty_reward_pair
+            metric_param = f'penalty_{penalty}_reward_{reward}'
+            path_result = os.path.join(path_result_root, metric_param)
+            data_list = read_data(path_result, metric_name, dict_key=f'{metric_name}_mean')
+            for set_name, data_set in zip(set_names, data_list):
+                metric_dict[set_name].append(data_set)
+
+        metric_df = pd.DataFrame(metric_dict)
+        metric_df.to_csv(os.path.join(path_result_root, f'table_{metric_name}.csv'))
+
+
 if __name__ == '__main__':
     from see_metric_single_source_ae_ns import ListDecodedFiles as ListDecodedFilesOne
 
     Z_SRC_NAME = ['Z_zero']
 
-    PATH_SAVE_ROOT = '../../result_separation_fuss'
-    object_decoded_files_one = ListDecodedFilesOne(PATH_SAVE_ROOT, Z_SRC_NAME)
-    compute_num_active_matrices(object_decoded_files_one)
-
     PATH_SAVE_ROOT = '../../result_separation_one_autoencoder'
     object_decoded_files_one = ListDecodedFilesOne(PATH_SAVE_ROOT, Z_SRC_NAME)
     compute_num_active_matrices(object_decoded_files_one)
+    path_result = '../../result_separation_one_autoencoder/model_13_3_1/metric/1_n3_100'
+    load_metric(path_result)
 
     PATH_SAVE_ROOT = '../../result_separation_search_decoder'
     object_decoded_files_one = ListDecodedFilesOne(PATH_SAVE_ROOT, Z_SRC_NAME)
     compute_num_active_matrices(object_decoded_files_one, set_names=('test',))
+    path_result = '../../result_separation_search_decoder/model_13_2_1_lr1e-3_ep100/metric/best_sum_mse'
+    load_metric(path_result)
 
     PATH_SAVE_ROOT = '../../result_separation_ae_ns_single'
     model_names = ('model_13_2_1', 'model_13_3_1', 'model_15_2_6', 'model_21_6_10')
@@ -86,7 +118,17 @@ if __name__ == '__main__':
         path_save_model = os.path.join(PATH_SAVE_ROOT, model_name, 'load_decoder')
         object_decoded_files_one = ListDecodedFilesOne(path_save_model, Z_SRC_NAME)
         compute_num_active_matrices(object_decoded_files_one)
+    path_result = '../../result_separation_ae_ns_single/model_13_3_1/load_decoder/model_1_n3_200/metric/1_n3_200'
+    load_metric(path_result)
+
+    PATH_SAVE_ROOT = '../../result_separation_fuss'
+    object_decoded_files_one = ListDecodedFilesOne(PATH_SAVE_ROOT, Z_SRC_NAME)
+    compute_num_active_matrices(object_decoded_files_one)
+    path_result = '../../result_separation_fuss/model_13_2_1/metric/1_n4_100'
+    load_metric(path_result)
 
     PATH_SAVE_ROOT = '../../result_separation_kim'
     object_decoded_files_one = ListDecodedFilesOne(PATH_SAVE_ROOT, Z_SRC_NAME)
     compute_num_active_matrices(object_decoded_files_one)
+    path_result = '../../result_separation_kim/model_13_3_1/metric/1_n3_100'
+    load_metric(path_result)

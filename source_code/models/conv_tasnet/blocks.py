@@ -48,7 +48,7 @@ def conv_block(inputs, filters, kernel_size, use_residual=True):
         inputs (Keras.Tensor): input vector of the block.
         filters (int): The number of channels in the internal layers.
         kernel_size (int): The convolution kernel size of the middle layer.
-        use_residual (bool, optional): whether to use residual block/output. Defaults to True.
+        use_residual (bool, optional): Whether use residual block/output. Defaults to True.
     """
     x = inputs
     x = Conv1D(filters, kernel_size)(x)
@@ -77,7 +77,7 @@ def tcn_block(inputs, filters, residual_channels, skip_channels, kernel_size, di
         dilation (int): dilation rate of the convolutional layers.
         causal (bool): whether support causal.
         norm_type (str, optional): type of the normalization layer. Defaults to "gln".
-        use_residual (bool, optional): whether to use residual block/output. Defaults to True.
+        use_residual (bool, optional): Whether use residual block/output. Defaults to True.
     """
     x = inputs
     x = Conv1D(filters, 1)(x)

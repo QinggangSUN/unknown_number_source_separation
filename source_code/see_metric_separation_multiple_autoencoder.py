@@ -146,7 +146,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, sm_index, 
         s_names (list[list[str]]): list of datasets.
         src_names (list[str]): list of name of sources including mixed sources, e.g. ['Z_0_ns',...,'Z_7_ns'].
         s_data (list[list[h5pyFile]]): file object of datas.
-        sm_index (list[tuple]): clean target source of mixed sources, e.g. [(1, 2),...,(1,2,3)].
+        sm_index (list[tuple(int)]): clean target source of mixed sources, e.g. [(1, 2),...,(1,2,3)].
         set_names (list[str]): list of names of sets, e.g. ['train', 'val', 'test'].
     """
     name_weight_files = object_decoded_files.name_weight_files  # [source][model][src][para_name][weight_file]
@@ -200,7 +200,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, sm_index, 
 
                     si_snr_list, si_snr_mean = compute_metric(data_s_l, data_sp_l, si_snr_np)
                     display_metric(si_snr_list, path_metric_para_l, set_names,
-                                   # hist_bins=(0.6, 1.0, 40),
+                                   # hist_bins=(-40., 40., 40),
                                    save_name='si_snr')
                     save_metric(path_metric_para_l, 'si_snr', ['si_snr_mean'], [np.asarray(si_snr_mean)],
                                 {'si_snr': dict(zip(set_names, si_snr_list))})
@@ -271,7 +271,7 @@ def metrics_to_files(path_metrics, src_names, sm_index, set_names):  # [source][
     Args:
         path_metrics (list[list[str]]): [source][model], path of metric dirs.
         src_names (list[str]): list of name of sources including mixed sources, e.g. ['Z_0_ns',...,'Z_7_ns'].
-        sm_index (list[tuple]): clean target source of mixed sources, e.g. [(1, 2),...,(1,2,3)].
+        sm_index (list[tuple(int)]): clean target source of mixed sources, e.g. [(1, 2),...,(1,2,3)].
         set_names (list[str]): list of names of sets, e.g. ['train', 'val', 'test'].
     """
     sm_names = [[src_names[k] for k in sm_index_i] for sm_index_i in sm_index]  # [source][src]

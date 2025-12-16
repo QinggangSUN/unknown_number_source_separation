@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
             # # model_12 RNN TasNet without mask
             search_model(PATH_RESULT, 'model_13_2_1', input_dim, x_dict_i, z_dict_i, None,
-                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4, 'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                         **{'i': lr_i, 'j': -4, 'n_outputs': 4, 'epochs': 200, 'batch_size': 8, 'bs_pred': 8,
                              'n_conv_encoder': 1, 'n_filters_conv': 64,
                              'block_type': 'BLSTM', 'latent_dim': 200,
                              'n_block_encoder': 1,  'n_block_decoder': 1,
@@ -145,6 +145,19 @@ if __name__ == '__main__':
                              'bool_clean_weight_file': True, 'bool_test_weight': True,
                              'bool_test_ae_w': True, 'bool_test_ed_w': False})
 
+            # Conv-TasNet
+            search_model(PATH_RESULT, 'model_14_1_6', input_dim, x_dict_i, z_dict_i, None,
+                         **{'i': lr_i, 'j': lr_j, 'n_outputs': 4,
+                            'epochs': 200, 'batch_size': 6, 'bs_pred': 6,
+                            'n_conv_encoder': 1, 'n_filters_encoder': 64,
+                            'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
+                            'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
+                            'output_activation': 'tanh',
+                            'bool_train': True, 'bool_test_ae': False,
+                            'bool_save_ed': False, 'bool_test_ed': False,
+                            'bool_clean_weight_file': True, 'bool_test_weight': True,
+                            'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
             # Multiple-Decoder Conv-TasNet without mask
             search_model(PATH_RESULT, 'model_15_2_6', input_dim, x_dict_i, z_dict_i, None,
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': 4,
@@ -154,6 +167,17 @@ if __name__ == '__main__':
                             'n_channels_conv': 128, 'n_channels_bottleneck': 64, 'n_channels_skip': 64,
                             'n_layer_each_block': 5, 'n_block_encoder': 1, 'n_block_decoder': 2,
                             'output_activation': 'tanh',
+                            'bool_train': True, 'bool_test_ae': False,
+                            'bool_save_ed': False, 'bool_test_ed': False,
+                            'bool_clean_weight_file': True, 'bool_test_weight': True,
+                            'bool_test_ae_w': True, 'bool_test_ed_w': False})
+
+            # Wave-U-Net
+            search_model(PATH_RESULT, 'model_20_5_10', input_dim, x_dict_i, z_dict_i, None,
+                         **{'i': lr_i, 'j': -4, 'n_outputs': 4,
+                            'epochs': 800, 'batch_size': 16, 'bs_pred': 16,
+                            'n_pad_input': 13, 'num_layers': 4,
+                            'use_skip': False, 'output_type': 'direct', 'output_activation': 'tanh',
                             'bool_train': True, 'bool_test_ae': False,
                             'bool_save_ed': False, 'bool_test_ed': False,
                             'bool_clean_weight_file': True, 'bool_test_weight': True,

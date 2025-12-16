@@ -123,7 +123,7 @@ class ListDecodedFiles(object):
 def data_reshape_same(data_1, data_2, mode='transpose'):
     """Reshape data_2 to shape of data_1.
         data_1.shape == (nsams, channel=1, fl)
-        Be careful, most time should use transpose rather than reshape.
+        Be carefull, most time should use transpose rather than reshape.
     Args:
         data_1 (list[np.ndarray] or np.ndarray): data_1 with target data shape.
         data_2 (list[np.ndarray] or np.ndarray): data_2 to reshape.
@@ -132,6 +132,7 @@ def data_reshape_same(data_1, data_2, mode='transpose'):
         data_1 (list[np.ndarray] or np.ndarray): data_1 with target data shape.
         data_2 (list[np.ndarray] or np.ndarray): data_2 after reshape.
     """
+
     def func_reshape(data_1, data_2, mode):
         if mode == 'transpose':
             if data_2.ndim == 3:
@@ -158,7 +159,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, s_data, set_names)
     """compute metrics.
     Args:
         object_decoded_files (class ListDecodedFiles): object for list predict decoded files
-        s_names (list[list[str]]): list of datasets.
+        s_names (list[list[str]]): name of the sources, e.g. [['Z_0_ns_train', 'Z_0_ns_val', 'Z_0_ns_test'],...].
         src_names (list[str]): list of name of sources including mixed sources, e.g. ['Z_0_ns',...,'Z_7_ns'].
         s_data (list[list[h5pyFile]]): file object of datas.
         set_names (list[str]): list of names of sets, e.g. ['train', 'val', 'test'].

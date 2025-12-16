@@ -1,0 +1,1 @@
+{"config_dict": {"n_components": 3, "n_components_uwedge": null, "rank_components": false, "pairing": "complement", "max_matrices": 1, "groupsize": null, "partitionsize": null, "timelags": null, "instantcov": true, "max_iter": 5000, "tol": 1e-12, "minimize_loss": false, "condition_threshold": null, "random_state": null, "skip_sklearn_checks": false}}

@@ -51,8 +51,9 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
         src_names (list[str]): [src], list of name of sources including mixed sources,
                                 e.g. ['Z_0_zero',...,'Z_7_zero'].
         src_names_st (list[str]): [src], list of name of single target sources, e.g. ['Z_0_zero',...,'Z_3_zero'].
-        s_data (list[h5pyFile]): [set](nsams, nsrc, channel=1, fl), file object of datas.
-        sm_index (list[tuple]): clean target source of mixed sources, e.g. [(1,2),...,(1,2,3)].
+        s_data (list[h5pyFile]): [set](nsams, nsrc, channel=1, fl), file object of datas, e.g. ['Z_0_zero',...,
+            'Z_7_zero'].
+        sm_index (list[tuple(int)]): clean target source of mixed sources, e.g. [(1,2),...,(1,2,3)].
         set_names (list[str]): list of names of sets, e.g. ['train', 'val', 'test'].
         zp_name_end (str): name of the predict file key word, e.g. 'autodecoded'.
         y_data (list[np.ndarray]): n_hot_labels of the samples.
@@ -63,7 +64,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
     path_metrics_paras = object_decoded_files.path_metrics_paras  # [model][para_name]
 
     for sm_index_i, sm_src_name_i, label_i in zip(sm_index, src_names, labels):  # level i: [source]
-        logging.debug(f'sm_index_i {sm_index_i}')   # indexes of channels output target signals
+        logging.debug(f'sm_index_i {sm_index_i}')  # indexes of channels output target signals
         logging.debug(f'sm_src_name_i {sm_src_name_i}')
         data_s_filter_i = [z_pred_filter(s_data_i, y_data_i, label_i)
                            for y_data_i, s_data_i in zip(y_data, s_data)]  # [set](nsams, src, channel=1, fl)
@@ -107,7 +108,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                     sp_data_s_i = []  # [src][set](n_sams, fl, nsrc=1)
                     for k in range(len(src_names_st)):
-                        sp_data_s_i.append([np.asarray(data_sp_z_l_n)[:, :, k:k+1] for data_sp_z_l_n in data_sp_z_l])
+                        sp_data_s_i.append([np.asarray(data_sp_z_l_n)[:, :, k:k + 1] for data_sp_z_l_n in data_sp_z_l])
 
                     for data_s_l, data_sp_l, src_name_l in zip(s_data_i, sp_data_s_i, src_names_st):
                         path_metric_para_l = os.path.join(path_metric_para_i, src_name_l)
@@ -128,7 +129,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                     sp_data_sm_i = []  # [src][set](n_sams, fl, nsrc=1)
                     for k in sm_index_i:
-                        sp_data_sm_i.append([np.asarray(data_sp_z_l_n)[:, :, k:k+1] for data_sp_z_l_n in data_sp_z_l])
+                        sp_data_sm_i.append([np.asarray(data_sp_z_l_n)[:, :, k:k + 1] for data_sp_z_l_n in data_sp_z_l])
 
                     for data_s_l, data_sp_l, src_name_l in zip(sm_data_i, sp_data_sm_i, src_name_sm_i):
                         path_metric_para_l = os.path.join(path_metric_para_i, src_name_l)
@@ -156,12 +157,12 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                     sp_data_sz_i = []  # [src][set](n_sams, fl, nsrc=1)
                     for k in sz_index_i:
-                        sp_data_sz_i.append([np.asarray(data_sp_z_l_n)[:, :, k:k+1] for data_sp_z_l_n in data_sp_z_l])
+                        sp_data_sz_i.append([np.asarray(data_sp_z_l_n)[:, :, k:k + 1] for data_sp_z_l_n in data_sp_z_l])
 
-                    for data_sp_l, src_name_sz_l in zip(sp_data_sz_i, src_name_sz_i):   # [set] in [src][set]
+                    for data_sp_l, src_name_sz_l in zip(sp_data_sz_i, src_name_sz_i):  # [set] in [src][set]
                         path_metric_para_l = os.path.join(path_metric_para_i, src_name_sz_l)
 
-                        for data_s_l_lj, src_name_l_lj in zip(sm_data_i, src_name_sm_i):   # [set] in [src][set]
+                        for data_s_l_lj, src_name_l_lj in zip(sm_data_i, src_name_sm_i):  # [set] in [src][set]
                             path_metric_para_l_lj = os.path.join(path_metric_para_l, src_name_l_lj)
                             mkdir(path_metric_para_l_lj)
 
@@ -204,7 +205,7 @@ def compute_metrics(object_decoded_files, s_names, src_names, src_names_st,
 
                             compute_sdr(data_s_n, data_sp_n, path_metric_para_i,
                                         [f'sdr_{set_name_n}', f'isr_{set_name_n}',
-                                            f'sir_{set_name_n}', f'sar_{set_name_n}'],
+                                         f'sir_{set_name_n}', f'sar_{set_name_n}'],
                                         src_name_sm_i, hist_bins=[(0, 30, 30), (0, 30, 30), (0, 30, 30), (0, 30, 30)],
                                         save_name=[f'sdr_{set_name_n}', f'isr_{set_name_n}',
                                                    f'sir_{set_name_n}', f'sar_{set_name_n}'])

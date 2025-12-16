@@ -132,7 +132,7 @@ if __name__ == '__main__':
                             'bool_test_ae_w': True, 'bool_test_ed_w': False})
 
             search_model(path_result_i, 'model_10_2_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
-                         **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
+                         **{'i': lr_i, 'j': -4, 'n_outputs': n_outputs_i,
                             'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
                             'n_conv_encoder': 1, 'n_filters_conv': 64,
                             'block_type': 'BLSTM', 'latent_dim': 200,
@@ -152,7 +152,7 @@ if __name__ == '__main__':
                              'bool_save_ed': False, 'bool_test_ed': False,
                              'bool_clean_weight_file': True, 'bool_test_weight': True,
                              'bool_test_ae_w': True, 'bool_test_ed_w': False,
-                             'bool_num_padd': True})
+                             'bool_num_pad': True})
 
             # multiple decoder RNN TasNet
             # search_model(path_result_i, 'model_11_1_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
@@ -190,7 +190,7 @@ if __name__ == '__main__':
             #                 'bool_save_ed': False, 'bool_test_ed': False,
             #                 'bool_clean_weight_file': True, 'bool_test_weight': True,
             #                 'bool_test_ae_w': True, 'bool_test_ed_w': False,
-            #                 'bool_num_padd': True})
+            #                 'bool_num_pad': True})
 
             # RNN TasNet without mask
             # search_model(path_result_i, 'model_12_1_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
@@ -228,7 +228,7 @@ if __name__ == '__main__':
             #                 'bool_save_ed': False, 'bool_test_ed': False,
             #                 'bool_clean_weight_file': True, 'bool_test_weight': True,
             #                 'bool_test_ae_w': True, 'bool_test_ed_w': False,
-            #                 'bool_num_padd': True})
+            #                 'bool_num_pad': True})
 
             # Multiple-Decoder RNN TasNet without mask
             search_model(path_result_i, 'model_13_1_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
@@ -244,8 +244,8 @@ if __name__ == '__main__':
                             'bool_test_ae_w': True, 'bool_test_ed_w': False})
 
             search_model(path_result_i, 'model_13_2_1', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],
-                         **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
-                            'epochs': 100, 'batch_size': 8, 'bs_pred': 8,
+                         **{'i': lr_i, 'j': -4, 'n_outputs': n_outputs_i,
+                            'epochs': 200, 'batch_size': 8, 'bs_pred': 8,
                             'n_conv_encoder': 1, 'n_filters_conv': 64,
                             'block_type': 'BLSTM', 'latent_dim': 200,
                             'n_block_encoder': 1, 'n_block_decoder': 1,
@@ -266,7 +266,7 @@ if __name__ == '__main__':
                             'bool_save_ed': False, 'bool_test_ed': False,
                             'bool_clean_weight_file': True, 'bool_test_weight': True,
                             'bool_test_ae_w': True, 'bool_test_ed_w': False,
-                            'bool_num_padd': True})
+                            'bool_num_pad': True})
 
             # Conv-Tasnet
             search_model(path_result_i, 'model_14_1_6', input_dim, x_dict_i, z_dict_set_i, x_name_i[0][:-6],

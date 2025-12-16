@@ -129,7 +129,7 @@ if __name__ == '__main__':
                          path_save_load_decoder=os.path.join(path_result_i, 'model_13_3_1'),
                          **{'i': lr_i, 'j': lr_j, 'n_outputs': n_outputs_i,
                             'epochs': 200, 'batch_size': 8, 'bs_pred': 8,
-                            'bool_num_padd': True,
+                            'bool_num_pad': True,
                             'n_conv_encoder': 1, 'n_filters_conv': 64,
                             'block_type': 'dprnn', 'latent_dim': 200,
                             'n_block_encoder': 1, 'n_block_decoder': 1,
